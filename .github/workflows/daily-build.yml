@@ -36,7 +36,7 @@ jobs:
           REPO_BRANCH: master
         run: |
           git clone -b $REPO_BRANCH $REPO_URL
-          cp domain-list-community/data chnlist/data
+          mv -f domain-list-community/data chnlist/data
 
       - name: Generate dnsmasq file
         run: |
