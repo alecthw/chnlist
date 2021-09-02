@@ -1,5 +1,7 @@
 # chnlist
 
+![Daily Build](https://github.com/alecthw/chnlist/workflows/Daily%20Build/badge.svg)
+
 自定义域名，生产dnsmasq格式的配置文件。
 
 引用数据取自[v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)。
