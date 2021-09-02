@@ -1,0 +1,61 @@
+name: Daily Build
+
+on:
+  schedule:
+    - cron: 0 20 * * *
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+      - name: Set Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+          architecture: 'x64'
+
+      - name: Clone mmdb_china_ip_list
+        env:
+          REPO_URL: https://github.com/alecthw/chnlist
+          REPO_BRANCH: main
+        run: git clone -b $REPO_BRANCH $REPO_URL
+
+      - name: Clone domain-list-community
+        env:
+          REPO_URL: https://github.com/v2fly/domain-list-community
+          REPO_BRANCH: master
+        run: |
+          git clone -b $REPO_BRANCH $REPO_URL
+          cp domain-list-community/data chnlist/data
+
+      - name: Generate dnsmasq file
+        run: |
+          cd chnlist
+          python main.py
+
+      - name: Prepare publish
+        run: |
+          mkdir -p publish
+          cp -af chnlist/direct.domains.conf publish/direct.domains.conf
+
+      - name: Push to release branch
+        run: |
+          cd publish
+          git init
+          git config --local user.name "${{ github.actor }}"
+          git config --local user.email "${{ github.actor }}@users.noreply.github.com"
+          git checkout -b release
+          git add .
+          git commit -m "upload to release"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.PERSONAL_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f -u origin release
