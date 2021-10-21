@@ -5,6 +5,7 @@ include:bing@cn
 include:category-pt
 include:huawei
 include:speedtest
+include:alibabacloud
 
 digicert.com
 plex.tv
