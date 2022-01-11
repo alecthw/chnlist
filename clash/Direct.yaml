@@ -41,3 +41,4 @@ payload:
   - DOMAIN-SUFFIX,bing.com
   - DOMAIN-SUFFIX,plex.tv
   - DOMAIN-SUFFIX,plex.direct
+  - DOMAIN-SUFFIX,goindex.space
