@@ -2,46 +2,46 @@ payload:
   # DNS
   # google
   - DOMAIN-SUFFIX,dns.google
-  - IP-CIDR,8.8.8.8/32
-  - IP-CIDR,8.8.4.4/32
-  - IP-CIDR6,2001:4860:4860::8888/128
-  - IP-CIDR6,2001:4860:4860::8844/128
+  - IP-CIDR,8.8.8.8/32,no-resolve
+  - IP-CIDR,8.8.4.4/32,no-resolve
+  - IP-CIDR6,2001:4860:4860::8888/128,no-resolve
+  - IP-CIDR6,2001:4860:4860::8844/128,no-resolve
   # quad9
   - DOMAIN-SUFFIX,dns.quad9.net
-  - IP-CIDR,9.9.9.9/32
-  - IP-CIDR,149.112.112.112/32
-  - IP-CIDR6,2620:fe::fe/128
-  - IP-CIDR6,2620:fe::9/128
+  - IP-CIDR,9.9.9.9/32,no-resolve
+  - IP-CIDR,149.112.112.112/32,no-resolve
+  - IP-CIDR6,2620:fe::fe/128,no-resolve
+  - IP-CIDR6,2620:fe::9/128,no-resolve
   # cloudflare
   - DOMAIN-SUFFIX,cloudflare-dns.com
   - DOMAIN-SUFFIX,dns.cloudflare.com
-  - IP-CIDR,1.1.1.1/32
-  - IP-CIDR,1.0.0.1/32
-  - IP-CIDR6,2606:4700:4700::1111/128
-  - IP-CIDR6,2606:4700:4700::1001/128
+  - IP-CIDR,1.1.1.1/32,no-resolve
+  - IP-CIDR,1.0.0.1/32,no-resolve
+  - IP-CIDR6,2606:4700:4700::1111/128,no-resolve
+  - IP-CIDR6,2606:4700:4700::1001/128,no-resolve
   # opendns
   - DOMAIN-SUFFIX,doh.opendns.com
-  - IP-CIDR,208.67.222.222/32
-  - IP-CIDR,208.67.220.220/32
-  - IP-CIDR6,2620:119:35::35/128
-  - IP-CIDR6,2620:119:53::53/128
+  - IP-CIDR,208.67.222.222/32,no-resolve
+  - IP-CIDR,208.67.220.220/32,no-resolve
+  - IP-CIDR6,2620:119:35::35/128,no-resolve
+  - IP-CIDR6,2620:119:53::53/128,no-resolve
   # opendns
   - DOMAIN-SUFFIX,doh.opendns.com
-  - IP-CIDR,94.140.14.140/32
-  - IP-CIDR,94.140.14.141/32
-  - IP-CIDR6,2a10:50c0::1:ff/128
-  - IP-CIDR6,2a10:50c0::2:ff/128
-  - IP-CIDR,94.140.14.14/32
-  - IP-CIDR,94.140.15.15/32
-  - IP-CIDR6,2a10:50c0::ad1:ff/128
-  - IP-CIDR6,2a10:50c0::ad2:ff/128
-  - IP-CIDR,94.140.14.15/32
-  - IP-CIDR,94.140.15.16/32
-  - IP-CIDR6,2a10:50c0::bad1:ff/128
-  - IP-CIDR6,2a10:50c0::bad2:ff/128
+  - IP-CIDR,94.140.14.140/32,no-resolve
+  - IP-CIDR,94.140.14.141/32,no-resolve
+  - IP-CIDR6,2a10:50c0::1:ff/128,no-resolve
+  - IP-CIDR6,2a10:50c0::2:ff/128,no-resolve
+  - IP-CIDR,94.140.14.14/32,no-resolve
+  - IP-CIDR,94.140.15.15/32,no-resolve
+  - IP-CIDR6,2a10:50c0::ad1:ff/128,no-resolve
+  - IP-CIDR6,2a10:50c0::ad2:ff/128,no-resolve
+  - IP-CIDR,94.140.14.15/32,no-resolve
+  - IP-CIDR,94.140.15.16/32,no-resolve
+  - IP-CIDR6,2a10:50c0::bad1:ff/128,no-resolve
+  - IP-CIDR6,2a10:50c0::bad2:ff/128,no-resolve
   # DNS.SB
-  - IP-CIDR,185.222.222.222/32
-  - IP-CIDR,45.11.45.11/32
+  - IP-CIDR,185.222.222.222/32,no-resolve
+  - IP-CIDR,45.11.45.11/32,no-resolve
   - DOMAIN-SUFFIX,doh.dns.sb
   - DOMAIN-SUFFIX,doh.sb
   - DOMAIN-SUFFIX,dot.sb
