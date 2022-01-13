@@ -7,6 +7,20 @@ import shutil
 domain_pattern = re.compile(r'[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(?:\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+')
 exclude_domains = []
 
+clash_support_types = [
+    # "RULE-SET",
+    "DOMAIN",
+    "DOMAIN-SUFFIX",
+    "DOMAIN-KEYWORD",
+    "GEOIP",
+    "IP-CIDR",
+    "IP-CIDR6",
+    "SRC-IP-CIDR",
+    "SRC-PORT",
+    "DST-PORT",
+    # "PROCESS-NAME",
+    # "MATCH"
+]
 
 def load_exclude_domains():
     with open("exclude_domains", 'r', encoding='utf-8') as f:
@@ -21,24 +35,24 @@ def load_exclude_domains():
 def gen_dnsmasq(name, dns):
     domains = []
 
-    # 放到data目录里合并处理
+    # 放到data/geosite目录里合并处理
     file_name = "{:s}_domains".format(name)
-    shutil.copyfile(file_name, "data/{:s}".format(file_name))
+    shutil.copyfile(file_name, "data/geosite/{:s}".format(file_name))
 
     q = queue.SimpleQueue()
     q.put("include:{:s}".format(file_name))
 
     while not q.empty():
         item = q.get()
-        isOnlyCn = False
+        is_only_cn = False
 
         if item.startswith('include:'):
             if item.endswith('@cn'):
-                isOnlyCn = True
+                is_only_cn = True
                 item = item.replace('@cn', '')
 
             item_file = item.replace('include:', '')
-            with open("data/{:s}".format(item_file), 'r', encoding='utf-8') as f:
+            with open("data/geosite/{:s}".format(item_file), 'r', encoding='utf-8') as f:
                 content = f.read().splitlines()
 
             for line in content:
@@ -46,12 +60,12 @@ def gen_dnsmasq(name, dns):
                 if len(line) == 0:
                     continue
                 elif line.startswith('include:'):
-                    if isOnlyCn:
+                    if is_only_cn:
                         q.put("{:s}@cn".format(line))
                     else:
                         q.put(line)
                 else:
-                    if isOnlyCn and ('@cn' not in line):
+                    if is_only_cn and ('@cn' not in line):
                         continue
 
                     re_search = domain_pattern.search(line)
@@ -60,10 +74,41 @@ def gen_dnsmasq(name, dns):
                         if (domain not in domains) and (domain not in exclude_domains):
                             domains.append("server=/{:s}/{:s}\n".format(domain, dns))
 
-    with open("direct.domains.conf", mode='w', encoding='utf-8') as out_f:
+    with open("publish/direct.domains.conf", mode='w', encoding='utf-8') as out_f:
         out_f.writelines(domains)
 
 
+def gen_clash_providers():
+    for root, dirs, files in os.walk(r"data/acl4ssr"):
+        for file in files:
+            if os.path.splitext(file)[1] == '.list':
+                in_file_path = "{:s}/{:s}".format(root, file).replace('\\', '/')
+                out_file_path = "publish/Providers/{:s}".format(
+                    in_file_path.replace('data/acl4ssr/', '').replace('.list', '.yaml'))
+
+                with open(in_file_path, 'r', encoding='utf-8') as f:
+                    content = f.read().splitlines()
+
+                provider_out = ["payload:\n"]
+                for line in content:
+                    line = line.lstrip()
+                    if len(line) == 0:
+                        continue
+                    if line.startswith('#'):
+                        provider_out.append("  {:s}\n".format(line))
+                        continue
+                    if line.split(",")[0] not in clash_support_types:
+                        provider_out.append("  # {:s}\n".format(line))
+                        continue
+                    provider_out.append("  - {:s}\n".format(line))
+
+                with open(out_file_path, mode='w', encoding='utf-8') as out_f:
+                    out_f.writelines(provider_out)
+
+
 if __name__ == '__main__':
+    if not os.path.exists("publish"):
+        os.makedirs("publish/Providers/Ruleset")
     load_exclude_domains()
     gen_dnsmasq('direct', '114.114.114.114')
+    gen_clash_providers()

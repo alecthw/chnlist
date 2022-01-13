@@ -28,7 +28,12 @@ jobs:
         env:
           REPO_URL: https://github.com/alecthw/chnlist
           REPO_BRANCH: main
-        run: git clone -b $REPO_BRANCH $REPO_URL
+        run: |
+          git clone -b $REPO_BRANCH $REPO_URL
+
+      - name: Prepare Dir
+        run: |
+          mkdir -p chnlist/data
 
       - name: Clone domain-list-community
         env:
@@ -36,7 +41,15 @@ jobs:
           REPO_BRANCH: master
         run: |
           git clone -b $REPO_BRANCH $REPO_URL
-          mv -f domain-list-community/data chnlist/data
+          mv -f domain-list-community/data chnlist/data/geosite
+
+      - name: Clone ACL4SSR
+        env:
+          REPO_URL: https://github.com/ACL4SSR/ACL4SSR
+          REPO_BRANCH: master
+        run: |
+          git clone -b $REPO_BRANCH $REPO_URL
+          mv -f ACL4SSR/Clash chnlist/data/acl4ssr
 
       - name: Generate dnsmasq file
         run: |
@@ -45,8 +58,7 @@ jobs:
 
       - name: Prepare publish
         run: |
-          mkdir -p publish
-          cp -af chnlist/direct.domains.conf publish/direct.domains.conf
+          cp -af chnlist/publish publish
 
       - name: Push to release branch
         run: |
