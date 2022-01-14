@@ -22,6 +22,13 @@ clash_support_types = [
     # "MATCH"
 ]
 
+clash_ip_types = [
+    "GEOIP",
+    "IP-CIDR",
+    "IP-CIDR6"
+]
+
+
 def load_exclude_domains():
     with open("exclude_domains", 'r', encoding='utf-8') as f:
         content = f.read().splitlines()
@@ -79,6 +86,7 @@ def gen_dnsmasq(name, dns):
 
 
 def gen_clash_providers():
+    divide_providers = {}
     for root, dirs, files in os.walk(r"data/acl4ssr"):
         for file in files:
             if os.path.splitext(file)[1] == '.list':
@@ -86,10 +94,15 @@ def gen_clash_providers():
                 out_file_path = "publish/Providers/{:s}".format(
                     in_file_path.replace('data/acl4ssr/', '').replace('.list', '.yaml'))
 
+                provider_out = ["payload:\n"]
+
+                # divide domain and ip
+                out_file_path_ip = out_file_path.replace('.yaml', '_IP.yaml')
+                divide_providers[out_file_path] = ["payload:\n"]
+                divide_providers[out_file_path_ip] = ["payload:\n"]
+
                 with open(in_file_path, 'r', encoding='utf-8') as f:
                     content = f.read().splitlines()
-
-                provider_out = ["payload:\n"]
                 for line in content:
                     line = line.lstrip()
                     if len(line) == 0:
@@ -100,15 +113,36 @@ def gen_clash_providers():
                     if line.split(",")[0] not in clash_support_types:
                         provider_out.append("  # {:s}\n".format(line))
                         continue
-                    provider_out.append("  - {:s}\n".format(line))
+
+                    out_line = "  - {:s}\n".format(line)
+
+                    # divide domain and ip
+                    if line.startswith('IP-CIDR') or line.startswith('GEOIP'):
+                        if "no-resolve" not in line:
+                            out_line = "  - {:s},no-resolve\n".format(line)
+                        divide_providers[out_file_path_ip].append(out_line)
+                    else:
+                        divide_providers[out_file_path].append(out_line)
+
+                    # no divide
+                    provider_out.append(out_line)
 
                 with open(out_file_path, mode='w', encoding='utf-8') as out_f:
                     out_f.writelines(provider_out)
+
+    # divide domain and ip
+    for divide_provider in divide_providers:
+        if len(divide_providers[divide_provider]) > 1:
+            with open(divide_provider.replace('/Providers/', '/ProvidersD/'), mode='w', encoding='utf-8') as out_f:
+                out_f.writelines(divide_providers[divide_provider])
 
 
 if __name__ == '__main__':
     if not os.path.exists("publish"):
         os.makedirs("publish/Providers/Ruleset")
+        os.makedirs("publish/Providers/Custom")
+        os.makedirs("publish/ProvidersD/Ruleset")
+        os.makedirs("publish/ProvidersD/Custom")
     load_exclude_domains()
     gen_dnsmasq('direct', '114.114.114.114')
     gen_clash_providers()

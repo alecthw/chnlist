@@ -50,6 +50,7 @@ jobs:
         run: |
           git clone -b $REPO_BRANCH $REPO_URL
           mv -f ACL4SSR/Clash chnlist/data/acl4ssr
+          cp -rf chnlist/clash chnlist/data/acl4ssr/Custom
 
       - name: Generate dnsmasq file
         run: |
