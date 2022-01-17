@@ -72,3 +72,27 @@ jobs:
           git commit -m "upload to release"
           git remote add origin "https://${{ github.actor }}:${{ secrets.PERSONAL_TOKEN }}@github.com/${{ github.repository }}"
           git push -f -u origin release
+
+      - name: Clean jsdelivr cache
+        run: |
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Custom/AllowProxy.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/LocalAreaNetwork.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Custom/Direct.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Custom/Proxy.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/UnBan.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/BanAD.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/BanProgramAD.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/DisneyPlus.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/Netflix.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/NetflixIP.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/ProxyMedia.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Download.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/Telegram.yaml
+          curl -skL https://purge.jsdelivr.net/gh/lhie1/Rules@master/Clash/Provider/Speedtest.yaml
+          curl -skL https://purge.jsdelivr.net/gh/lhie1/Rules@master/Clash/Provider/PayPal.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/Steam.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/Xbox.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/Ruleset/Microsoft.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/ProxyLite.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/ChinaDomain.yaml
+          curl -skL https://purge.jsdelivr.net/gh/alecthw/chnlist@release/Providers/ChinaCompanyIp.yaml
