@@ -38,6 +38,7 @@ DOMAIN-SUFFIX,rubyfish.cn
 
 # Custom
 DOMAIN-SUFFIX,bing.com
+DOMAIN,cdn.jsdelivr.net
 DOMAIN-SUFFIX,plex.tv
 DOMAIN-SUFFIX,plex.direct
 DOMAIN-SUFFIX,goindex.space
