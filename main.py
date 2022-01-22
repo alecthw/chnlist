@@ -86,6 +86,8 @@ def gen_dnsmasq(name, dns):
 
 
 def gen_clash_providers():
+    unban_remove = ["Epicgames", "epicgames", "Google", "google"]
+
     divide_providers = {}
     for root, dirs, files in os.walk(r"data/acl4ssr"):
         for file in files:
@@ -106,6 +108,9 @@ def gen_clash_providers():
                 for line in content:
                     line = line.lstrip()
                     if len(line) == 0:
+                        continue
+                    # remove some unban
+                    if file == "UnBan.list" and any(key in line for key in unban_remove):
                         continue
                     if line.startswith('#'):
                         provider_out.append("  {:s}\n".format(line))
