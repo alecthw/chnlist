@@ -39,6 +39,9 @@ DOMAIN-SUFFIX,rubyfish.cn
 # Custom
 DOMAIN-SUFFIX,bing.com
 DOMAIN-SUFFIX,jsdelivr.net
+DOMAIN-SUFFIX,iqiq.io
+DOMAIN-SUFFIX,monika.love
+DOMAIN-SUFFIX,staticaly.com
 DOMAIN-SUFFIX,ipify.org
 DOMAIN-SUFFIX,emby.media
 DOMAIN-SUFFIX,mb3admin.com
