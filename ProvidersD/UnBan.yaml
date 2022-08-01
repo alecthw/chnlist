@@ -1,0 +1,17 @@
+payload:
+  - DOMAIN-SUFFIX,dizhensubao.getui.com
+  - DOMAIN-SUFFIX,tracking-protection.cdn.mozilla.net
+  - DOMAIN,origin-a.akamaihd.net
+  - DOMAIN,xivanalysis.com
+  - DOMAIN,picanalysis.vivo.com.cn
+  - DOMAIN,picanalysis-auth.vivo.com.cn
+  - DOMAIN,fairplay.l.qq.com
+  - DOMAIN,livew.l.qq.com
+  - DOMAIN,vd.l.qq.com
+  - DOMAIN,analytics.strava.com
+  - DOMAIN,errlog.umeng.com
+  - DOMAIN,msg.umeng.com
+  - DOMAIN,msg.umengcloud.com
+  - DOMAIN,tracking.miui.com
+  - DOMAIN,app.adjust.com
+  - DOMAIN,bdtj.tagtic.cn

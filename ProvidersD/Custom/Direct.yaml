@@ -1,0 +1,16 @@
+payload:
+  - DOMAIN-SUFFIX,doh.pub
+  - DOMAIN-SUFFIX,dot.pub
+  - DOMAIN-SUFFIX,alidns.com
+  - DOMAIN-SUFFIX,doh.360.cn
+  - DOMAIN-SUFFIX,dot.360.cn
+  - DOMAIN-SUFFIX,rubyfish.cn
+  - DOMAIN-SUFFIX,bing.com
+  - DOMAIN-SUFFIX,jsdelivr.net
+  - DOMAIN-SUFFIX,iqiq.io
+  - DOMAIN-SUFFIX,monika.love
+  - DOMAIN-SUFFIX,staticaly.com
+  - DOMAIN-SUFFIX,ipify.org
+  - DOMAIN-SUFFIX,plex.tv
+  - DOMAIN-SUFFIX,plex.direct
+  - DOMAIN-SUFFIX,goindex.space

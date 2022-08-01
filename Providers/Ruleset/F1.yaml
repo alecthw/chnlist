@@ -1,0 +1,68 @@
+payload:
+  # F1 🏎
+  - DOMAIN-SUFFIX,f1.com
+  - DOMAIN-SUFFIX,formula1.com
+  - DOMAIN-SUFFIX,f1experiences.com
+  - DOMAIN-SUFFIX,f1authentics.com
+  - DOMAIN-SUFFIX,fiaformula1.com
+  - DOMAIN-SUFFIX,fiaformula2.com
+  - DOMAIN-SUFFIX,fiaformula3.com
+  - DOMAIN-SUFFIX,f1esports.com
+  - DOMAIN-SUFFIX,f1manager.com
+  - DOMAIN-SUFFIX,f1play.com
+  - DOMAIN-SUFFIX,bitmovin.com
+  - DOMAIN,d2n9h2wits23hf.cloudfront.net
+  - DOMAIN,f1prodlive.akamaized.net
+  # 🇧🇭 Bahrain Grand Prix
+  - DOMAIN-SUFFIX,bahraingp.com
+  # 🇸🇦 Saudi Arabian Grand Prix
+  - DOMAIN-SUFFIX,saudiarabiangp.com
+  # 🇦🇺 Australian Grand Prix
+  - DOMAIN-SUFFIX,grandprix.com.au
+  # 🇮🇹 Emilia Romagna Grand Prix
+  - DOMAIN-SUFFIX,autodromoimola.it
+  # 🇺🇸 Miami Grand Prix
+  - DOMAIN-SUFFIX,f1miamigp.com
+  # 🇪🇸 Spanish Grand Prix
+  - DOMAIN-SUFFIX,circuitcat.com
+  # 🇲🇨 Monaco Grand Prix
+  - DOMAIN-SUFFIX,formula1monaco.com
+  - DOMAIN-SUFFIX,monacograndprixticket.com
+  # 🇦🇿 Azerbaijan Grand Prix
+  - DOMAIN-SUFFIX,bakucitycircuit.com
+  # 🇨🇦 Canadian Grand Prix
+  - DOMAIN-SUFFIX,gpcanada.ca
+  - DOMAIN-SUFFIX,montrealgrandprix.com
+  # 🇬🇧 British Grand Prix
+  - DOMAIN-SUFFIX,silverstone.co.uk
+  # 🇦🇹 Austrian Grand Prix
+  - DOMAIN-SUFFIX,f1austria.com
+  # 🇫🇷 French Grand Prix
+  - DOMAIN-SUFFIX,gpfrance.com
+  # 🇭🇺 Hungarian Grand Prix
+  - DOMAIN-SUFFIX,hungaroring.hu
+  # 🇧🇪 Belgian Grand Prix
+  - DOMAIN-SUFFIX,spagrandprix.com
+  # 🇳🇱 Dutch Grand Prix
+  - DOMAIN-SUFFIX,dutchgp.com
+  # 🇮🇹 Italian Grand Prix
+  - DOMAIN-SUFFIX,monzanet.it
+  # 🇸🇬 Singapore Grand Prix
+  - DOMAIN-SUFFIX,singaporegp.sg
+  # 🇯🇵 Japanese Grand Prix
+  - DOMAIN-SUFFIX,suzukacircuit.jp
+  # 🇺🇸 United States Grand Prix
+  - DOMAIN-SUFFIX,circuitoftheamericas.com
+  # 🇲🇽 Mexican Grand Prix
+  - DOMAIN-SUFFIX,mexicogp.mx
+  # 🇧🇷 Brazilian Grand Prix
+  - DOMAIN-SUFFIX,f1saopaulo.com.br
+  # 🇦🇪 Abu Dhabi Grand Prix
+  - DOMAIN-SUFFIX,yasmarinacircuit.com
+  # Not in 2022 Calendar
+  # 🇷🇺 Russian Grand Prix (cancelled due to obvious reason)
+  - DOMAIN-SUFFIX,rosgonki.ru
+  # 🇺🇸 Las Vegas Grand Prix (comming 2023)
+  - DOMAIN-SUFFIX,f1lasvegasgrandprix.com
+  # 🇨🇳 Chinese Grand Prix (contract agreed to 2025)
+  # 
