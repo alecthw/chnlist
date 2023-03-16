@@ -37,7 +37,8 @@ IP-CIDR6,2001:dc7:1000::1/128,no-resolve
 DOMAIN-SUFFIX,rubyfish.cn
 
 # Custom
-DOMAIN-SUFFIX,bing.com
+DOMAIN-SUFFIX,cn.bing.com
+DOMAIN-SUFFIX,bing.cn
 DOMAIN-SUFFIX,jsdelivr.net
 DOMAIN-SUFFIX,iqiq.io
 DOMAIN-SUFFIX,monika.love

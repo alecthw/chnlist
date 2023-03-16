@@ -3,6 +3,9 @@ import os
 import queue
 import re
 import shutil
+import urllib
+import urllib.request
+import urllib.response
 
 domain_pattern = re.compile(r'[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(?:\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+')
 exclude_domains = []
@@ -142,12 +145,41 @@ def gen_clash_providers():
                 out_f.writelines(divide_providers[divide_provider])
 
 
+def gen_mosdns_whitelist():
+    whitelist_urls = [
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list",
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list",
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.list"
+    ]
+
+    mosdns_whitelist = []
+    for whitelist_url in whitelist_urls:
+        data = urllib.request.urlopen(whitelist_url).read().decode("utf-8")
+        rule_lines = data.splitlines()
+        for line in rule_lines:
+            line = line.lstrip()
+            if line.startswith('DOMAIN'):
+                item = item.replace('DOMAIN,', 'full:')
+            if line.startswith('DOMAIN-SUFFIX'):
+                item = item.replace('DOMAIN-SUFFIX,', 'domain:')
+            if line.startswith('DOMAIN-KEYWORD'):
+                item = item.replace('DOMAIN-KEYWORD,', 'keyword:')
+            mosdns_whitelist.append(line)
+
+    with open("publish/mosdns/whitelist.list", mode='w', encoding='utf-8') as out_f:
+        out_f.writelines(mosdns_whitelist)
+
+
+
+
 if __name__ == '__main__':
     if not os.path.exists("publish"):
         os.makedirs("publish/Providers/Ruleset")
         os.makedirs("publish/Providers/Custom")
         os.makedirs("publish/ProvidersD/Ruleset")
         os.makedirs("publish/ProvidersD/Custom")
+        os.makedirs("publish/mosdns")
     load_exclude_domains()
     gen_dnsmasq('direct', '114.114.114.114')
     gen_clash_providers()
