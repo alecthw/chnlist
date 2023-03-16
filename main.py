@@ -159,6 +159,7 @@ def gen_mosdns_whitelist():
         rule_lines = data.splitlines()
         for line in rule_lines:
             line = line.lstrip()
+            line += "\n"
             if line.startswith('DOMAIN'):
                 mosdns_whitelist.append(line.replace('DOMAIN,', 'full:'))
                 continue
