@@ -160,20 +160,18 @@ def gen_mosdns_whitelist():
         for line in rule_lines:
             line = line.lstrip()
             line += "\n"
-            if line.startswith('DOMAIN'):
+            if line.startswith('DOMAIN,'):
                 mosdns_whitelist.append(line.replace('DOMAIN,', 'full:'))
                 continue
-            if line.startswith('DOMAIN-SUFFIX'):
-               mosdns_whitelist.append(line.replace('DOMAIN-SUFFIX,', 'domain:'))
-               continue
-            if line.startswith('DOMAIN-KEYWORD'):
-               mosdns_whitelist.append(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
-               continue
+            if line.startswith('DOMAIN-SUFFIX,'):
+                mosdns_whitelist.append(line.replace('DOMAIN-SUFFIX,', 'domain:'))
+                continue
+            if line.startswith('DOMAIN-KEYWORD,'):
+                mosdns_whitelist.append(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
+                continue
 
     with open("publish/mosdns/whitelist.list", mode='w', encoding='utf-8') as out_f:
         out_f.writelines(mosdns_whitelist)
-
-
 
 
 if __name__ == '__main__':
