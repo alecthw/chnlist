@@ -181,5 +181,6 @@ if __name__ == '__main__':
         os.makedirs("publish/ProvidersD/Custom")
         os.makedirs("publish/mosdns")
     load_exclude_domains()
-    gen_dnsmasq('direct', '114.114.114.114')
+    gen_dnsmasq('direct', '223.5.5.5')
     gen_clash_providers()
+    gen_mosdns_whitelist()
