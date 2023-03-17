@@ -147,13 +147,16 @@ def gen_clash_providers():
 
 def gen_mosdns_whitelist():
     whitelist_urls = [
+        "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomDirect.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
+        "https://ghproxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list",
         "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.list"
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.list",
+        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.list"
     ]
 
-    mosdns_whitelist = []
+    mosdns_whitelist = set()
     for whitelist_url in whitelist_urls:
         data = urllib.request.urlopen(whitelist_url).read().decode("utf-8")
         rule_lines = data.splitlines()
@@ -161,17 +164,17 @@ def gen_mosdns_whitelist():
             line = line.lstrip()
             line += "\n"
             if line.startswith('DOMAIN,'):
-                mosdns_whitelist.append(line.replace('DOMAIN,', 'full:'))
+                mosdns_whitelist.add(line.replace('DOMAIN,', 'full:'))
                 continue
             if line.startswith('DOMAIN-SUFFIX,'):
-                mosdns_whitelist.append(line.replace('DOMAIN-SUFFIX,', 'domain:'))
+                mosdns_whitelist.add(line.replace('DOMAIN-SUFFIX,', 'domain:'))
                 continue
             if line.startswith('DOMAIN-KEYWORD,'):
-                mosdns_whitelist.append(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
+                mosdns_whitelist.add(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
                 continue
 
     with open("publish/mosdns/whitelist.list", mode='w', encoding='utf-8') as out_f:
-        out_f.writelines(mosdns_whitelist)
+        out_f.writelines(list(mosdns_whitelist))
 
 
 if __name__ == '__main__':
