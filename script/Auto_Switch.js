@@ -1,7 +1,7 @@
 /*******************************
 
 Surge根据网络自动切换出站模式脚本，指定SSID切换为直连模式
-
+当模式为全局代理的时候不会切换
 
 ******************
 Surge配置说明
@@ -30,8 +30,8 @@ function switchOutbound(mode) {
     $httpAPI('GET', '/v1/outbound', undefined, function (curRes) {
         console.log(`Current mode: ${curRes.mode}`);
 
-        if (curRes.mode === mode) {
-            console.log('Switch is not need!');
+        if (curRes.mode === mode || curRes.mode === 'proxy') {
+            console.log('Switch is not needed!');
             $done();
 
         } else {
