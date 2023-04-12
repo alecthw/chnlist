@@ -1,11 +1,11 @@
-# DNS
-# 114
+# 114 dns
 IP-CIDR,114.114.114.114/32,no-resolve
 IP-CIDR,114.114.115.115/32,no-resolve
 IP-CIDR,114.114.114.119/32,no-resolve
 IP-CIDR,114.114.115.119/32,no-resolve
 IP-CIDR,114.114.114.110/32,no-resolve
 IP-CIDR,114.114.115.110/32,no-resolve
+
 # DNSPod
 DOMAIN-SUFFIX,doh.pub
 DOMAIN-SUFFIX,dot.pub
@@ -13,27 +13,32 @@ IP-CIDR,119.29.29.29/32,no-resolve
 IP-CIDR,119.28.28.28/32,no-resolve
 IP-CIDR6,2402:4e00::/128,no-resolve
 IP-CIDR6,2402:4e00:1::/128,no-resolve
+
 # Alidns
 DOMAIN-SUFFIX,alidns.com
 IP-CIDR,223.5.5.5/32,no-resolve
 IP-CIDR,223.6.6.6/32,no-resolve
 IP-CIDR6,2400:3200::1/128,no-resolve
 IP-CIDR6,2400:3200:baba::1/128,no-resolve
-# Baidu
+
+# Baidu dns
 IP-CIDR,180.76.76.76/32,no-resolve
 IP-CIDR6,2400:da00::6666/128,no-resolve
-# 360
+
+# 360 dns
 DOMAIN-SUFFIX,doh.360.cn
 DOMAIN-SUFFIX,dot.360.cn
 IP-CIDR,101.226.4.6/32,no-resolve
 IP-CIDR,218.30.118.6/32,no-resolve
 IP-CIDR,123.125.81.6/32,no-resolve
 IP-CIDR,140.207.198.6/32,no-resolve
-# CNNIC
+
+# CNNIC dns
 IP-CIDR,1.2.4.8/32,no-resolve
 IP-CIDR,210.2.4.8/32,no-resolve
 IP-CIDR6,2001:dc7:1000::1/128,no-resolve
-# rubyfish
+
+# rubyfish dns
 DOMAIN-SUFFIX,rubyfish.cn
 
 # Custom
@@ -47,6 +52,7 @@ DOMAIN-SUFFIX,ipify.org
 DOMAIN-SUFFIX,plex.tv
 DOMAIN-SUFFIX,plex.direct
 DOMAIN-SUFFIX,his.huawei.com
+DOMAIN-SUFFIX,connectivitycheck.platform.hicloud.com
 DOMAIN-SUFFIX,support.huawei.com
 DOMAIN-SUFFIX,iaccess.huawei.com
 DOMAIN-SUFFIX,goindex.space
