@@ -1,0 +1,123 @@
+proxies:
+  - name: HK01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: hk02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: SG01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: sg02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: JP01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: jp02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: US01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: us02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: TW01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: tw02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: UK01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: uk02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: KR01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: kr02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: India01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: India02
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+
+  - name: Turkey01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: Brazil01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
+  - name: Chile01
+    type: ss
+    server: test.cloudflare.com
+    port: 443
+    cipher: aes-128-gcm
+    password: 123456
