@@ -14,7 +14,7 @@ Surge配置说明
 ******************
 
 [Script]
-自动模式切换 = type=event, event-name=network-changed, argument="direct=SSID1|SSID2|SSID3,proxy=SSID4|SSID5", script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Auto_Switch.js
+自动模式切换 = type=event, event-name=network-changed, argument="direct=SSID1|SSID2|SSID3,proxy=SSID4|SSID5", script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Auto_Switch_Mode_2.js
 
 *******************************/
 
