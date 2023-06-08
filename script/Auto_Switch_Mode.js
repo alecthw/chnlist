@@ -8,7 +8,7 @@ Surge根据网络自动切换出站模式
 
 ******************
 Surge配置说明
-请修改argument中的SSID为需要自动切换到直接连接模式的SSID，以逗号','分隔
+请修改argument中的SSID为需要自动切换到直接连接模式的SSID，以逗号','分隔，不要额外添加空格
 ******************
 
 [Script]
@@ -48,7 +48,7 @@ function switchOutbound(mode) {
                         console.log('Switch successful!');
                     } else {
                         console.log('Switch failed!');
-                        $notification.post('自动策略切换', '', '自动出站模式切换失败，请检查日志。');
+                        $notification.post('自动模式切换', '', '自动出站模式切换失败，请检查日志。');
                     }
 
                     $done();
