@@ -41,6 +41,15 @@ IP-CIDR6,2001:dc7:1000::1/128,no-resolve
 # rubyfish dns
 DOMAIN-SUFFIX,rubyfish.cn
 
+#Subscribe
+DOMAIN-SUFFIX,mmcgtm.lol
+DOMAIN-SUFFIX,nexconvert.com
+DOMAIN-SUFFIX,tls.tips
+DOMAIN-SUFFIX,tagcdnsub.work
+DOMAIN-SUFFIX,tagsub.net
+DOMAIN-SUFFIX,tagsssubscribe.com
+DOMAIN-SUFFIX,smallstrawberry.com
+
 # Custom
 DOMAIN-SUFFIX,cn.bing.com
 DOMAIN-SUFFIX,bing.cn
@@ -55,7 +64,6 @@ DOMAIN-SUFFIX,his.huawei.com
 DOMAIN-SUFFIX,connectivitycheck.platform.hicloud.com
 DOMAIN-SUFFIX,support.huawei.com
 DOMAIN-SUFFIX,iaccess.huawei.com
-DOMAIN-SUFFIX,mmcgtm.lol
 DOMAIN-SUFFIX,goindex.space
 DOMAIN-SUFFIX,ideame.top
 DOMAIN-SUFFIX,projectv.cc
