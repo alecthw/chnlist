@@ -1,0 +1,5 @@
+#!name=All MITM
+#!desc=开启所有域名MITM，用于抓包调试用
+
+[MITM]
+hostname = %INSERT% *
