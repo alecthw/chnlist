@@ -1,6 +1,7 @@
 #comstom
 data/
 publish/
+.vscode/
 
 # Log file
 *.log

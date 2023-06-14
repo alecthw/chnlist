@@ -36,7 +36,7 @@ def load_exclude_domains():
     with open("exclude_domains", 'r', encoding='utf-8') as f:
         content = f.read().splitlines()
     for line in content:
-        line = line.lstrip()
+        line = line.strip()
         if len(line) == 0:
             continue
         exclude_domains.append(line)
@@ -66,7 +66,7 @@ def gen_dnsmasq(name, dns):
                 content = f.read().splitlines()
 
             for line in content:
-                line = line.lstrip()
+                line = line.strip()
                 if len(line) == 0:
                     continue
                 elif line.startswith('include:'):
@@ -109,7 +109,7 @@ def gen_clash_providers():
                 with open(in_file_path, 'r', encoding='utf-8') as f:
                     content = f.read().splitlines()
                 for line in content:
-                    line = line.lstrip()
+                    line = line.strip()
                     if len(line) == 0:
                         continue
                     # remove some unban
@@ -161,7 +161,7 @@ def gen_mosdns_whitelist():
         data = urllib.request.urlopen(whitelist_url).read().decode("utf-8")
         rule_lines = data.splitlines()
         for line in rule_lines:
-            line = line.lstrip()
+            line = line.strip()
             line += "\n"
             if line.startswith('DOMAIN,'):
                 mosdns_whitelist.add(line.replace('DOMAIN,', 'full:'))
@@ -177,6 +177,91 @@ def gen_mosdns_whitelist():
         out_f.writelines(list(mosdns_whitelist))
 
 
+def quanx_script_2_sgmodule():
+    script_urls = {
+        "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
+        "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
+        "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
+    }
+
+    for name, script_url in script_urls.items():
+        rewrite_flag = False
+        rewrite_list = []
+        mitm_flag = False
+        mitm_list = []
+
+        desc = ""
+
+        data = urllib.request.urlopen(script_url).read().decode("utf-8")
+        rule_lines = data.splitlines()
+        for line in rule_lines:
+            line = line.strip()
+
+            # end flag
+            if line.endswith("*/"):
+                break
+            elif line.startswith("*****") or line.startswith("#") or line.isspace() or len(line) == 0:
+                continue
+            else:
+                if line.startswith("脚本功能"):
+                    desc = line.replace('脚本功能：', '')
+                    continue
+
+                    # reset flag
+                if line.startswith("["):
+                    rewrite_flag = False
+                    mitm_flag = False
+
+                if line == "[rewrite_local]":
+                    rewrite_flag = True
+                elif line == "[mitm]":
+                    mitm_flag = True
+                else:
+                    if rewrite_flag:
+                        rewrite_list.append(line)
+                    if mitm_flag:
+                        mitm_list.append(line)
+
+        sgmodule_lines = []
+        sgmodule_lines.append("#!name={:s}\n".format(name))
+        sgmodule_lines.append("#!desc={:s}\n".format(desc))
+        sgmodule_lines.append("\n")
+
+        rewrite_locals = []
+        url_rewrites = []
+        for rewrite in rewrite_list:
+            params = rewrite.split()
+            if params[2] == "reject":
+                url_rewrites.append("{:s} _ reject\n".format(params[0]))
+            elif params[2] == "script-response-body":
+                rewrite_locals.append(
+                    "{:s} = type=http-response,pattern={:s},requires-body=1,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], params[3]))
+
+        if len(url_rewrites) > 0:
+            sgmodule_lines.append("[URL Rewrite]\n")
+            sgmodule_lines.extend(url_rewrites)
+            sgmodule_lines.append("\n")
+
+        if len(rewrite_locals) > 0:
+            sgmodule_lines.append("[Script]\n")
+            sgmodule_lines.extend(rewrite_locals)
+            sgmodule_lines.append("\n")
+
+        if len(mitm_list) > 0:
+            sgmodule_lines.append("[MITM]\n")
+        for mitm in mitm_list:
+            params = mitm.split("=")
+            key = params[0].strip()
+            value = params[1].strip()
+            if key == "hostname":
+                sgmodule_lines.append("hostname = %APPEND% {:s}\n".format(value))
+
+        file_name = script_url.split("/")[-1].replace(".js", ".sgmodule").replace(".conf", ".sgmodule")
+
+        with open("publish/sgmodule/{:s}".format(file_name), mode='w', encoding='utf-8') as out_f:
+            out_f.writelines(list(sgmodule_lines))
+
+
 if __name__ == '__main__':
     if not os.path.exists("publish"):
         os.makedirs("publish/Providers/Ruleset")
@@ -184,7 +269,9 @@ if __name__ == '__main__':
         os.makedirs("publish/ProvidersD/Ruleset")
         os.makedirs("publish/ProvidersD/Custom")
         os.makedirs("publish/mosdns")
+        os.makedirs("publish/sgmodule")
     load_exclude_domains()
     gen_dnsmasq('direct', '223.5.5.5')
     gen_clash_providers()
     gen_mosdns_whitelist()
+    quanx_script_2_sgmodule()

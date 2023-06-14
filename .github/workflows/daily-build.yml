@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - "clash/**"
+      - "main.py"
 
 jobs:
   build:
