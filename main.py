@@ -231,11 +231,17 @@ def quanx_script_2_sgmodule():
         url_rewrites = []
         for rewrite in rewrite_list:
             params = rewrite.split()
-            if params[2] == "reject":
+            if params[2] == ("reject"):
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
+            elif params[2] == ("reject-200"):
+                rewrite_locals.append(
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js"))
             elif params[2] == "script-response-body":
                 rewrite_locals.append(
                     "{:s} = type=http-response,pattern={:s},requires-body=1,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], params[3]))
+            elif params[2] == "script-request-header":
+                rewrite_locals.append(
+                    "{:s} = type=http-request,pattern={:s},requires-body=0,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], params[3]))
 
         if len(url_rewrites) > 0:
             sgmodule_lines.append("[URL Rewrite]\n")
