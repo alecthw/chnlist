@@ -238,9 +238,9 @@ def quanx_script_2_sgmodule():
             params = rewrite.split()
             if params[2] == ("reject"):
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
-            elif params[2] == ("reject-200"):
+            elif params[2].startswith("reject-"):
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js"))
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s},argument={:s}\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js", params[2]))
 
             elif params[2] == "script-response-header":
                 rewrite_locals.append(
