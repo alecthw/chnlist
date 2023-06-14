@@ -180,6 +180,7 @@ def gen_mosdns_whitelist():
 def quanx_script_2_sgmodule():
     script_urls = {
         "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
+        "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
         "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
         "ChatGPT": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/ChatGPTPlusCrack.js",
 
@@ -234,27 +235,31 @@ def quanx_script_2_sgmodule():
 
         rewrite_locals = []
         url_rewrites = []
+        index = 0
         for rewrite in rewrite_list:
+            index += 1
+            srcipt_name = "{:s}-{:d}".format(name, index)
+
             params = rewrite.split()
             if params[2] == ("reject"):
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
             elif params[2].startswith("reject-"):
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s},argument={:s}\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js", params[2]))
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s},argument={:s}\n".format(srcipt_name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject.js", params[2]))
 
             elif params[2] == "script-response-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-response,pattern={:s},requires-body=0,script-path={:s}\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-response,pattern={:s},requires-body=0,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
             elif params[2] == "script-response-body":
                 rewrite_locals.append(
-                    "{:s} = type=http-response,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-response,pattern={:s},requires-body=1,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
 
             elif params[2] == "script-request-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=0,script-path={:s}\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-request,pattern={:s},requires-body=0,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
             elif params[2] == "script-request-body":
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
 
         if len(url_rewrites) > 0:
             sgmodule_lines.append("[URL Rewrite]\n")

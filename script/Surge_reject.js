@@ -8,10 +8,19 @@ QuantumultX重写转换Surge重写时
 
 *******************************/
 
-if ($argument == "reject-array") {
-  $done({ response: { status: 200, body: [] } });
-} else if ($argument == "reject-dict") {
-  $done({ response: { status: 200, body: {} } });
-} else {
-  $done({ response: { status: 200 } });
-}
+response_map = {
+  "reject-array": {
+    status: 200,
+    headers: { "Content-Type": "application/json;charset=UTF-8" },
+    body: JSON.stringify([]),
+  },
+  "reject-dict": {
+    status: 200,
+    headers: { "Content-Type": "application/json;charset=UTF-8" },
+    body: JSON.stringify({}),
+  },
+  "reject-img": { status: 200 },
+  "reject-200": { status: 200 },
+};
+
+$done({ response: response_map[$argument] });
