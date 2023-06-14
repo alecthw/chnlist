@@ -181,10 +181,15 @@ def quanx_script_2_sgmodule():
     script_urls = {
         "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
         "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
+        "ChatGPT": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/ChatGPTPlusCrack.js",
+
         "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
+        "逼哩涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js",
     }
 
     for name, script_url in script_urls.items():
+        file_name = script_url.split("/")[-1].replace(".js", "").replace(".conf", "")
+
         rewrite_flag = False
         rewrite_list = []
         mitm_flag = False
@@ -235,13 +240,21 @@ def quanx_script_2_sgmodule():
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
             elif params[2] == ("reject-200"):
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=1,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js"))
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js"))
+
+            elif params[2] == "script-response-header":
+                rewrite_locals.append(
+                    "{:s} = type=http-response,pattern={:s},requires-body=0,script-path={:s}\n".format(name, params[0], params[3]))
             elif params[2] == "script-response-body":
                 rewrite_locals.append(
-                    "{:s} = type=http-response,pattern={:s},requires-body=1,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-response,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], params[3]))
+
             elif params[2] == "script-request-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=0,max-size=0,script-path={:s},script-update-interval=0\n".format(name, params[0], params[3]))
+                    "{:s} = type=http-request,pattern={:s},requires-body=0,script-path={:s}\n".format(name, params[0], params[3]))
+            elif params[2] == "script-request-body":
+                rewrite_locals.append(
+                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(name, params[0], params[3]))
 
         if len(url_rewrites) > 0:
             sgmodule_lines.append("[URL Rewrite]\n")
@@ -262,9 +275,7 @@ def quanx_script_2_sgmodule():
             if key == "hostname":
                 sgmodule_lines.append("hostname = %APPEND% {:s}\n".format(value))
 
-        file_name = script_url.split("/")[-1].replace(".js", ".sgmodule").replace(".conf", ".sgmodule")
-
-        with open("publish/sgmodule/{:s}".format(file_name), mode='w', encoding='utf-8') as out_f:
+        with open("publish/sgmodule/{:s}.sgmodule".format(file_name), mode='w', encoding='utf-8') as out_f:
             out_f.writelines(list(sgmodule_lines))
 
 
