@@ -235,6 +235,7 @@ def quanx_script_2_sgmodule():
 
         rewrite_locals = []
         url_rewrites = []
+        map_locals = []
         index = 0
         for rewrite in rewrite_list:
             index += 1
@@ -243,20 +244,30 @@ def quanx_script_2_sgmodule():
             params = rewrite.split()
             if params[2] == ("reject"):
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
-            elif params[2].startswith("reject-"):
-                rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s},argument={:s}\n".format(srcipt_name, params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject.js", params[2]))
+
+            elif params[2] == ("reject-200"):
+                map_locals.append("{:s} data={:s}\n".format(
+                    params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank.txt"))
+            elif params[2] == ("reject-img"):
+                map_locals.append("{:s} data={:s}\n".format(
+                    params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank.gif"))
+            elif params[2] == ("reject-array"):
+                map_locals.append("{:s} data={:s}\n".format(
+                    params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank_array.json"))
+            elif params[2] == ("reject-dict"):
+                map_locals.append("{:s} data={:s}\n".format(
+                    params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank_dict.json"))
 
             elif params[2] == "script-response-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-response,pattern={:s},requires-body=0,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
+                    "{:s} = type=http-response,pattern={:s},script-path={:s}\n".format(srcipt_name, params[0], params[3]))
             elif params[2] == "script-response-body":
                 rewrite_locals.append(
                     "{:s} = type=http-response,pattern={:s},requires-body=1,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
 
             elif params[2] == "script-request-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},requires-body=0,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
+                    "{:s} = type=http-request,pattern={:s},,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
             elif params[2] == "script-request-body":
                 rewrite_locals.append(
                     "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
@@ -269,6 +280,11 @@ def quanx_script_2_sgmodule():
         if len(rewrite_locals) > 0:
             sgmodule_lines.append("[Script]\n")
             sgmodule_lines.extend(rewrite_locals)
+            sgmodule_lines.append("\n")
+
+        if len(map_locals) > 0:
+            sgmodule_lines.append("[Map Local]\n")
+            sgmodule_lines.extend(map_locals)
             sgmodule_lines.append("\n")
 
         if len(mitm_list) > 0:
