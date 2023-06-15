@@ -246,8 +246,9 @@ def quanx_script_2_sgmodule():
                 url_rewrites.append("{:s} _ reject\n".format(params[0]))
 
             elif params[2] == ("reject-200"):
-                map_locals.append("{:s} data={:s}\n".format(
-                    params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank.txt"))
+                rewrite_locals.append(
+                    "{:s} = type=http-request,pattern={:s},script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js\n".format(srcipt_name, params[0]))
+
             elif params[2] == ("reject-img"):
                 map_locals.append("{:s} data={:s}\n".format(
                     params[0], "https://raw.githubusercontent.com/alecthw/chnlist/main/blank/blank.gif"))

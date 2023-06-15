@@ -4,7 +4,7 @@ QuantumultX重写转换Surge重写时
 
 匹配QuantumultX的reject-200规则
 
-{name} = type=http-request,pattern={pattern},requires-body=1,script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js,argument=reject-200
+{name} = type=http-request,pattern={pattern},requires-body=1,script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject.js,argument=reject-200
 
 *******************************/
 
