@@ -179,13 +179,23 @@ def gen_mosdns_whitelist():
 
 def quanx_script_2_sgmodule():
     script_urls = {
-        "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
-        "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
+        "阿里云盘": "https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js",
+        "百度网盘": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js",
         "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
-        "ChatGPT": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/ChatGPTPlusCrack.js",
 
+        "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
+        "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
+        "WPS超级会员Pro": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSuperVIPuserCrack.js",
+
+        "PornHubPremium": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js",
         "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
+        "麻豆社区": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/mdsqallcrack.js",
+        "欲涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornComicsCrack.js",
+        "涩蕉视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js",
+        "悦色视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js",
         "逼哩涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js",
+        "Javbd": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js",
+        "啪哩啪哩": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/PaliPali.conf",
     }
 
     for name, script_url in script_urls.items():
@@ -268,7 +278,7 @@ def quanx_script_2_sgmodule():
 
             elif params[2] == "script-request-header":
                 rewrite_locals.append(
-                    "{:s} = type=http-request,pattern={:s},,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
+                    "{:s} = type=http-request,pattern={:s},script-path={:s}\n".format(srcipt_name, params[0], params[3]))
             elif params[2] == "script-request-body":
                 rewrite_locals.append(
                     "{:s} = type=http-request,pattern={:s},requires-body=1,script-path={:s}\n".format(srcipt_name, params[0], params[3]))
