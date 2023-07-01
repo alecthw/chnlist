@@ -51,6 +51,7 @@ DOMAIN-SUFFIX,tagsssubscribe.com
 DOMAIN-SUFFIX,smallstrawberry.com
 
 # Custom
+DOMAIN-SUFFIX,163.com
 DOMAIN-SUFFIX,cn.bing.com
 DOMAIN-SUFFIX,bing.cn
 DOMAIN-SUFFIX,jsdelivr.net
