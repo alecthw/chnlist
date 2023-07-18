@@ -189,6 +189,7 @@ def quanx_script_2_sgmodule():
 
         "PornHubPremium": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js",
         "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
+        "91Porn": "https://raw.githubusercontent.com/Yuheng0101/X/main/Scripts/91porn.js",
         "麻豆社区": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/mdsqallcrack.js",
         "欲涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornComicsCrack.js",
         "涩蕉视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js",
