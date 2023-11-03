@@ -1,11 +1,12 @@
 include:steam
-include:category-games@cn
-include:apple@cn
-include:bing@cn
+include:category-games
+include:apple
+include:bing
 include:category-pt
 include:huawei
 include:speedtest
 include:alibabacloud
 
 digicert.com
+emby.media
 plex.tv
