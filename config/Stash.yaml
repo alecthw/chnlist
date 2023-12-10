@@ -203,6 +203,18 @@ proxy-groups:
       - 🇺🇸 US
       - 🇨🇳 TW
       - 🇺🇳 Special
+  - name: Ubisoft
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Game.png
+    type: select
+    proxies:
+      - Domestic
+      - Proxy
+      - 🇭🇰 HK
+      - 🇸🇬 SG
+      - 🇯🇵 JP
+      - 🇺🇸 US
+      - 🇨🇳 TW
+      - 🇺🇳 Special
   - name: Xbox
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Game.png
     type: select
@@ -321,6 +333,8 @@ rules:
   - RULE-SET,OpenAI,OpenAI
   - RULE-SET,Steam,Steam
   - RULE-SET,Epic,Epic
+  - RULE-SET,UBI,Ubisoft
+  - RULE-SET,Ubisoft,Ubisoft
   - RULE-SET,Xbox,Xbox
   - RULE-SET,Microsoft,Microsoft
   - RULE-SET,ProxyLite,Proxy
@@ -424,6 +438,14 @@ rule-providers:
   Epic:
     behavior: classical
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.yaml
+    interval: 43200
+  UBI:
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/UBI/UBI.yaml
+    interval: 43200
+  Ubisoft:
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Ubisoft/Ubisoft.yaml
     interval: 43200
   Xbox:
     behavior: classical
