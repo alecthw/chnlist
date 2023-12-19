@@ -28,8 +28,8 @@ dns:
     - tls://120.53.53.53
   fake-ip-filter:
     - "*.jsdelivr.net"
-    - "ghproxy.com"
-    - "ghproxy.net"
+    - "mirror.ghproxy.com"
+    - "gh.goindex.space"
 
 proxy-providers:
   Subscribe:

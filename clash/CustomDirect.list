@@ -41,7 +41,15 @@ IP-CIDR6,2001:dc7:1000::1/128,no-resolve
 # rubyfish dns
 DOMAIN-SUFFIX,rubyfish.cn
 
-#Subscribe
+# Github proxy
+DOMAIN-SUFFIX,ghproxy.com
+DOMAIN-SUFFIX,ghproxy.net
+DOMAIN-SUFFIX,gitclone.com
+DOMAIN-SUFFIX,fgit.gq
+DOMAIN-SUFFIX,fgit.ml
+DOMAIN-SUFFIX,yzuu.cf
+
+# Subscribe
 DOMAIN-SUFFIX,mmcgtm.lol
 DOMAIN-SUFFIX,nexconvert.com
 DOMAIN-SUFFIX,tls.tips
