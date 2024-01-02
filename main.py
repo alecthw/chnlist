@@ -197,7 +197,7 @@ def quanx_script_2_sgmodule():
         "悦色视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js",
         "逼哩涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js",
         "Javbd": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js",
-        "啪哩啪哩": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/PaliPali.conf",
+        "蜜桃传媒": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PeachMediaYuheng01Crack.js",
     }
 
     for name, script_url in script_urls.items():
