@@ -27,8 +27,9 @@ dns:
     - tls://223.5.5.5
     - tls://120.53.53.53
   fake-ip-filter:
+    - "*.sn.mynetname.net"
     - "*.jsdelivr.net"
-    - "mirror.ghproxy.com"
+    - "*.ghproxy.com"
     - "gh.goindex.space"
 
 proxy-providers:
