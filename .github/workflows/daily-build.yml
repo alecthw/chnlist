@@ -28,7 +28,7 @@ jobs:
           python-version: '3.x'
           architecture: 'x64'
 
-      - name: Clone mmdb_china_ip_list
+      - name: Clone chnlist
         env:
           REPO_URL: https://github.com/alecthw/chnlist
           REPO_BRANCH: main
