@@ -30,7 +30,22 @@
 | ---------- | --- |
 | [链接](https://raw.githubusercontent.com/alecthw/chnlist/release/direct.domains.conf) | [链接](https://cdn.jsdelivr.net/gh/alecthw/chnlist@release/direct.domains.conf) |
 
+## mosdns
+
+[whitelist.list](https://raw.githubusercontent.com/alecthw/chnlist/release/mosdns/whitelist.list) 用于 mosdns 中，配合域名白名单实现精准的解析。
+
+详情参考此项目 [openwrt-actions](https://github.com/alecthw/openwrt-actions)，其中预置了 openclash 和 mosdns 相配合的配置。
+
 ## 路由器--Openclash
+
+首先推广下自己编译的 [OpenWrt 旁路由极简版](https://github.com/alecthw/openwrt-actions)，专为旁路由而制作。
+
+- 编译脚本以及个人修改的组件依赖全开源，Github Actions 在线编译，安全可靠无后门。
+- 基于 [lede](https://github.com/coolsnowwolf/lede) 源码
+- 默认配置 DHCPv6 Client 接口 lan6。
+- 默认配置好了 AdGuardHome 、 mosdns 和 openclash （或 ssrp ）的搭配运行配置。
+- openclash 预置 clash_meta 内核。
+- mosdns 使用了 [自己的修改版](https://github.com/alecthw/mosdns)，支持 MMDB GeoIP 匹配。
 
 待补充.....
 
