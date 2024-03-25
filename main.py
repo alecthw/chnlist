@@ -243,6 +243,8 @@ def quanx_script_2_sgmodule():
         sgmodule_lines = []
         sgmodule_lines.append("#!name={:s}\n".format(name))
         sgmodule_lines.append("#!desc={:s}\n".format(desc))
+        sgmodule_lines.append("#!category=chnlist\n")
+        sgmodule_lines.append("#!original={:s}\n".format(script_url))
         sgmodule_lines.append("\n")
 
         rewrite_locals = []

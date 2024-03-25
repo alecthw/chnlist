@@ -1,5 +1,6 @@
 #!name=Emby解锁
 #!desc=Emby解锁播放权限
+#!category=chnlist
 
 [Script]
 Emby解锁 = type=http-response,pattern=^https:\/\/mb3admin\.com\/admin\/service(\/registration\/validateDevice|\/appstore\/register|\/registration\/validate|\/registration\/getStatus|\/supporter\/retrievekey),requires-body=1,script-path=https://raw.githubusercontent.com/qiangxinglin/Emby/main/scripts/emby.js
