@@ -63,6 +63,7 @@ DOMAIN,sgtv.ii00.cc
 DOMAIN,sptv.ii00.cc
 
 # Custom
+DOMAIN-SUFFIX,ipip.net
 DOMAIN-SUFFIX,163.com
 DOMAIN-SUFFIX,cn.bing.com
 DOMAIN-SUFFIX,bing.cn
