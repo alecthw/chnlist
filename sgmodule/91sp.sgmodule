@@ -1,0 +1,12 @@
+#!name=91Porn
+#!desc=
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/Yuheng0101/X/main/Scripts/91SP/91sp.conf
+
+[Script]
+91Porn-1 = type=http-request,pattern=^https:\/\/(h5.\w+.(fun|site|ltd|life)\/apis|api.cxznl.com|api.bjkmy.net)\/common\/homepage\/official_website_popup,script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js
+91Porn-2 = type=http-response,pattern=^https:\/\/(h5.\w+.(fun|site|ltd|life)\/apis|api.cxznl.com|api.bjkmy.net)\/(m_user\/info|m_sns\/(film\/(film_detail|home_recommend_list)|short_video)|common\/splash_config),requires-body=1,script-path=https://raw.githubusercontent.com/Yuheng0101/X/main/Scripts/91SP/crack.js
+91Porn-3 = type=http-request,pattern=^https:\/\/(h5.\w+.(fun|site|ltd|life)\/apis|api.cxznl.com|api.bjkmy.net)\/m_sns\/(film\/film_detail|video\/apply_play_permission),script-path=https://raw.githubusercontent.com/Yuheng0101/X/main/Scripts/91SP/auto-login.js
+
+[MITM]
+hostname = %APPEND% h5.7j8x.fun, api.cxznl.com, api.bjkmy.net, h5.yv4w.site, h5.glv2.ltd, h5.2bfy.life, h5.d6j4.ltd
