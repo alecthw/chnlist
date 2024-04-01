@@ -56,6 +56,12 @@ proxy-groups:
       - 🇺🇳 Special
       - 🛫 Airport
     filter: .*
+  - name: Game
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Game.png
+    type: select
+    include-all: true
+    filter: (?i)(游戏|游遊|Game|GAME)
+
   - name: Domestic
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Direct.png
     type: select
@@ -186,6 +192,7 @@ proxy-groups:
     proxies:
       - Domestic
       - Proxy
+      - Game
       - 🇭🇰 HK
       - 🇸🇬 SG
       - 🇯🇵 JP
@@ -198,6 +205,7 @@ proxy-groups:
     proxies:
       - Domestic
       - Proxy
+      - Game
       - 🇭🇰 HK
       - 🇸🇬 SG
       - 🇯🇵 JP
@@ -210,6 +218,7 @@ proxy-groups:
     proxies:
       - Domestic
       - Proxy
+      - Game
       - 🇭🇰 HK
       - 🇸🇬 SG
       - 🇯🇵 JP
@@ -222,6 +231,7 @@ proxy-groups:
     proxies:
       - Domestic
       - Proxy
+      - Game
       - 🇭🇰 HK
       - 🇸🇬 SG
       - 🇯🇵 JP
