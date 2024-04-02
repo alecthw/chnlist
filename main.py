@@ -126,8 +126,8 @@ def gen_clash_providers():
 
                     # divide domain and ip
                     if line.startswith('IP-CIDR') or line.startswith('GEOIP'):
-                        if "no-resolve" not in line:
-                            out_line = "  - {:s},no-resolve\n".format(line)
+                        # if "no-resolve" not in line:
+                        #     out_line = "  - {:s},no-resolve\n".format(line)
                         divide_providers[out_file_path_ip].append(out_line)
                     else:
                         divide_providers[out_file_path].append(out_line)
