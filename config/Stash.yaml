@@ -56,12 +56,6 @@ proxy-groups:
       - 🇺🇳 Special
       - 🛫 Airport
     filter: .*
-  - name: Game
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Game.png
-    type: select
-    include-all: true
-    filter: (?i)(游戏|游遊|Game|GAME)
-
   - name: Domestic
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Direct.png
     type: select
@@ -75,6 +69,13 @@ proxy-groups:
       - REJECT
       - Domestic
       - Proxy
+
+  # Special
+  - name: Game
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Game.png
+    type: select
+    include-all: true
+    filter: (?i)(游戏|游遊|Game|GAME)
 
   # Auto
   - name: Fallback
@@ -357,7 +358,7 @@ rules:
 rule-providers:
   Lan:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.yaml
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan_No_Resolve.yaml
     interval: 43200
   CustomDirect:
     behavior: classical
