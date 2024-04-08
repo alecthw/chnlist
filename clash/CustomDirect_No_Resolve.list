@@ -11,6 +11,8 @@ DOMAIN-SUFFIX,doh.pub
 DOMAIN-SUFFIX,dot.pub
 IP-CIDR,119.29.29.29/32,no-resolve
 IP-CIDR,119.28.28.28/32,no-resolve
+IP-CIDR,1.12.12.12/32,no-resolve
+IP-CIDR,120.53.53.53/32,no-resolve
 IP-CIDR6,2402:4e00::/128,no-resolve
 IP-CIDR6,2402:4e00:1::/128,no-resolve
 
