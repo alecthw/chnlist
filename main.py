@@ -22,14 +22,72 @@ clash_support_types = [
     "SRC-PORT",
     "DST-PORT",
     # "PROCESS-NAME",
-    # "MATCH"
+    # "MATCH",
 ]
 
 clash_ip_types = [
     "GEOIP",
     "IP-CIDR",
-    "IP-CIDR6"
+    "IP-CIDR6",
 ]
+
+mosdns_whitelist_urls = [
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomDirect.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.yaml",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Domain.yaml",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.list",
+]
+
+mosdns_blacklist_urls = [
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomProxy.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyTerminus.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyPorn.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyTLS.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Disney/Disney.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Spotify/Spotify.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AmazonPrimeVideo/AmazonPrimeVideo.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/HBO/HBO.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/PayPal/PayPal.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/OpenAI/OpenAI.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/UBI/UBI.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Ubisoft/Ubisoft.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Nintendo/Nintendo.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.list",
+    "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ProxyLite/ProxyLite.list",
+]
+
+quanx_script_urls = {
+    "阿里云盘": "https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js",
+    "百度网盘": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js",
+    "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
+
+    "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
+    "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
+    "WPS超级会员Pro": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSuperVIPuserCrack.js",
+
+    "PornHubPremium": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js",
+    "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
+    "麻豆社区": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/mdsqallcrack.js",
+    "私房TV": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/SecretsMediaCrack.js",
+    "欲涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornComicsCrack.js",
+    "涩蕉视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js",
+    "悦色视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js",
+    "逼哩涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js",
+    "Javbd": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js",
+    "蜜桃传媒": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PeachMediaYuheng01Crack.js",
+}
 
 
 def load_exclude_domains():
@@ -145,63 +203,29 @@ def gen_clash_providers():
                 out_f.writelines(divide_providers[divide_provider])
 
 
-def gen_mosdns_whitelist():
-    whitelist_urls = [
-        "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomDirect.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.yaml",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Domain.yaml",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.list",
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.list"
-        "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.list"
-    ]
-
-    mosdns_whitelist = set()
-    for whitelist_url in whitelist_urls:
-        data = urllib.request.urlopen(whitelist_url).read().decode("utf-8")
+def gen_mosdns_list(list_urls, out_name):
+    mosdns_list = set()
+    for list_url in list_urls:
+        data = urllib.request.urlopen(list_url).read().decode("utf-8")
         rule_lines = data.splitlines()
         for line in rule_lines:
             line = line.strip()
             line += "\n"
             if line.startswith('DOMAIN,'):
-                mosdns_whitelist.add(line.replace('DOMAIN,', 'full:'))
+                mosdns_list.add(line.replace('DOMAIN,', 'full:'))
                 continue
             if line.startswith('DOMAIN-SUFFIX,'):
-                mosdns_whitelist.add(line.replace('DOMAIN-SUFFIX,', 'domain:'))
+                mosdns_list.add(line.replace('DOMAIN-SUFFIX,', 'domain:'))
                 continue
             if line.startswith('DOMAIN-KEYWORD,'):
-                mosdns_whitelist.add(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
+                mosdns_list.add(line.replace('DOMAIN-KEYWORD,', 'keyword:'))
                 continue
 
-    with open("publish/mosdns/whitelist.list", mode='w', encoding='utf-8') as out_f:
-        out_f.writelines(list(mosdns_whitelist))
+    with open("publish/mosdns/{:s}".format(out_name), mode='w', encoding='utf-8') as out_f:
+        out_f.writelines(list(mosdns_list))
 
 
-def quanx_script_2_sgmodule():
-    script_urls = {
-        "阿里云盘": "https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js",
-        "百度网盘": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js",
-        "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
-
-        "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
-        "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
-        "WPS超级会员Pro": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSuperVIPuserCrack.js",
-
-        "PornHubPremium": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js",
-        "91视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/JiuYiPornVideoCrack.js",
-        "麻豆社区": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/mdsqallcrack.js",
-        "私房TV": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/SecretsMediaCrack.js",
-        "欲涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornComicsCrack.js",
-        "涩蕉视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js",
-        "悦色视频": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js",
-        "逼哩涩漫": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js",
-        "Javbd": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js",
-        "蜜桃传媒": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PeachMediaYuheng01Crack.js",
-    }
-
+def quanx_script_2_sgmodule(script_urls):
     for name, script_url in script_urls.items():
         file_name = script_url.split("/")[-1].replace(".js", "").replace(".conf", "")
 
@@ -326,7 +350,12 @@ if __name__ == '__main__':
         os.makedirs("publish/mosdns")
         os.makedirs("publish/sgmodule")
     load_exclude_domains()
+
     gen_dnsmasq('direct', '223.5.5.5')
+
     gen_clash_providers()
-    gen_mosdns_whitelist()
-    quanx_script_2_sgmodule()
+
+    gen_mosdns_list(mosdns_whitelist_urls, "whitelist.list")
+    gen_mosdns_list(mosdns_blacklist_urls, "blacklist.list")
+
+    quanx_script_2_sgmodule(quanx_script_urls)
