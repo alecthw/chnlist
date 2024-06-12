@@ -120,6 +120,17 @@ proxy-groups:
       - 🇺🇳 Special
 
   # Media
+  - name: TikTok
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/TikTok.png
+    type: select
+    proxies:
+      - 🇺🇸 US
+      - 🇭🇰 HK
+      - 🇸🇬 SG
+      - 🇯🇵 JP
+      - 🇨🇳 TW
+      - Proxy
+      - Domestic
   - name: DisneyPlus
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Disney%2B.png
     type: select
@@ -350,6 +361,7 @@ rules:
   - RULE-SET,Apple,Apple
   - RULE-SET,Apple_Domain,Apple
   - RULE-SET,ChinaMedia,Domestic
+  - RULE-SET,TikTok,TikTok
   - RULE-SET,Disney,DisneyPlus
   - RULE-SET,Netflix,Netflix
   - RULE-SET,Spotify,Spotify
@@ -420,6 +432,10 @@ rule-providers:
   ChinaMedia:
     behavior: classical
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.yaml
+    interval: 43200
+  TikTok:
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.yaml
     interval: 43200
   Disney:
     behavior: classical
@@ -514,6 +530,8 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.yaml
     interval: 43200
 
+# Panel
+# https://raw.githubusercontent.com/xream/scripts/main/surge/modules/network-info/net-lsp-x.stoverride
 
 # BoxJS, http://boxjs.com
 # https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.stash.stoverride
