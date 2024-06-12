@@ -74,7 +74,6 @@ quanx_script_urls = {
     "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
 
     "网易云音乐": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/NeteaseMusicVipCrack.js",
-    "酷我音乐": "https://raw.githubusercontent.com/nameking77/Qx/main/rewrite/kw.js",
     "WPS超级会员Pro": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSuperVIPuserCrack.js",
 
     "PornHubPremium": "https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js",
