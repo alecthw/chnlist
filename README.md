@@ -36,7 +36,11 @@
 
 详情参考此项目 [openwrt-actions](https://github.com/alecthw/openwrt-actions)，其中预置了 openclash 和 mosdns 相配合的配置。
 
-## 路由器--Openclash
+## 路由器
+
+路由器中可使用的客户端。
+
+### Openclash
 
 首先推广下自己编译的 [OpenWrt 旁路由极简版](https://github.com/alecthw/openwrt-actions)，专为旁路由而制作。
 
@@ -49,26 +53,39 @@
 
 待补充.....
 
-## iOS--Surge
+## 手机 & PC
+
+手机、电脑等中可使用的客户端。
+
+### iOS--Surge
 
 待补充.....
 
-## iOS--Loon
+### iOS--Loon
 
 待补充.....
 
-## iOS--Stash
+### iOS--Stash
 
 待补充.....
 
-## iOS--QuantumultX
+### iOS--QuantumultX
 
 待补充.....
 
-## iOS--Shadowrocket
+### iOS--Shadowrocket
 
 待补充.....
 
-## Android--[Clash.Meta for Android](https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/Prerelease-alpha)
+### Android--[Clash.Meta for Android](https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/Prerelease-alpha)
 
 待补充.....
+
+## 关于 no-resolve
+
+当匹配遇到 IP 相关的规则时，会触发 DNS 解析。`no-resolve` 可以跳过这个过程。
+一旦触发了一次 DNS 解析，后续的 IP 相关规则即使配置了 `no-resolve` 也依然会生效。
+
+个人认为，当在路由器上作为透明代理使用时，DNS 解析始终都会被终端触发，DNS 经过代理软件时，代理软件会建立 IP - DOMIAN 的映射关系。所以，作为透明代理使用时，最好还是不配置 `no-resolve`，让所有 IP 相关的规则都直接生效。
+
+反之，在手机或者电脑上直接运行代理程序，或者通过配置系统代理的方式使用时，则应该配置 `no-resolve`，直到匹配 LAN 规则和 GEIOIP 规则时再触发 DNS 解析。

@@ -350,49 +350,45 @@ proxy-groups:
     include-all: true
 
 rules:
+  - RULE-SET,CustomDirect,Domestic,no-resolve
+  - RULE-SET,CustomProxy,Proxy,no-resolve
+  - RULE-SET,Direct,Domestic,no-resolve
+  - RULE-SET,CustomReject,AdBlock,no-resolve
+  - RULE-SET,AdvertisingLite,AdBlock,no-resolve
+  - RULE-SET,AdvertisingLite_Domain,AdBlock,no-resolve
+  - RULE-SET,ZhihuAds,AdBlock,no-resolve
+  - RULE-SET,Apple,Apple,no-resolve
+  - RULE-SET,Apple_Domain,Apple,no-resolve
+  - RULE-SET,ChinaMedia,Domestic,no-resolve
+  - RULE-SET,TikTok,TikTok,no-resolve
+  - RULE-SET,Disney,DisneyPlus,no-resolve
+  - RULE-SET,Netflix,Netflix,no-resolve
+  - RULE-SET,Spotify,Spotify,no-resolve
+  - RULE-SET,AmazonPrimeVideo,GlobalMedia,no-resolve
+  - RULE-SET,HBO,GlobalMedia,no-resolve
+  - RULE-SET,GlobalMedia,GlobalMedia,no-resolve
+  - RULE-SET,GlobalMedia_Domain,GlobalMedia,no-resolve
+  - RULE-SET,Download,Domestic,no-resolve
+  - RULE-SET,GameDownloadCN,Domestic,no-resolve
+  - RULE-SET,GameDownload,Domestic,no-resolve
+  - RULE-SET,Telegram,Telegram,no-resolve
+  - RULE-SET,Speedtest,Speedtest,no-resolve
+  - RULE-SET,PayPal,PayPal,no-resolve
+  - RULE-SET,OpenAI,OpenAI,no-resolve
+  - RULE-SET,Steam,Steam,no-resolve
+  - RULE-SET,Epic,Epic,no-resolve
+  - RULE-SET,UBI,Ubisoft,no-resolve
+  - RULE-SET,Ubisoft,Ubisoft,no-resolve
+  - RULE-SET,Xbox,Xbox,no-resolve
+  - RULE-SET,Microsoft,Microsoft,no-resolve
+  - RULE-SET,ProxyLite,Proxy,no-resolve
+  - RULE-SET,China,Domestic,no-resolve
+  - RULE-SET,China_Domain,Domestic,no-resolve
   - RULE-SET,Lan,DIRECT
-  - RULE-SET,CustomDirect,Domestic
-  - RULE-SET,CustomProxy,Proxy
-  - RULE-SET,Direct,Domestic
-  - RULE-SET,CustomReject,AdBlock
-  - RULE-SET,AdvertisingLite,AdBlock
-  - RULE-SET,AdvertisingLite_Domain,AdBlock
-  - RULE-SET,ZhihuAds,AdBlock
-  - RULE-SET,Apple,Apple
-  - RULE-SET,Apple_Domain,Apple
-  - RULE-SET,ChinaMedia,Domestic
-  - RULE-SET,TikTok,TikTok
-  - RULE-SET,Disney,DisneyPlus
-  - RULE-SET,Netflix,Netflix
-  - RULE-SET,Spotify,Spotify
-  - RULE-SET,AmazonPrimeVideo,GlobalMedia
-  - RULE-SET,HBO,GlobalMedia
-  - RULE-SET,GlobalMedia,GlobalMedia
-  - RULE-SET,GlobalMedia_Domain,GlobalMedia
-  - RULE-SET,Download,Domestic
-  - RULE-SET,GameDownloadCN,Domestic
-  - RULE-SET,GameDownload,Domestic
-  - RULE-SET,Telegram,Telegram
-  - RULE-SET,Speedtest,Speedtest
-  - RULE-SET,PayPal,PayPal
-  - RULE-SET,OpenAI,OpenAI
-  - RULE-SET,Steam,Steam
-  - RULE-SET,Epic,Epic
-  - RULE-SET,UBI,Ubisoft
-  - RULE-SET,Ubisoft,Ubisoft
-  - RULE-SET,Xbox,Xbox
-  - RULE-SET,Microsoft,Microsoft
-  - RULE-SET,ProxyLite,Proxy
-  - RULE-SET,China,Domestic
-  - RULE-SET,China_Domain,Domestic
   - GEOIP,CN,Domestic
   - MATCH,Final
 
 rule-providers:
-  Lan:
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan_No_Resolve.yaml
-    interval: 43200
   CustomDirect:
     behavior: classical
     url: https://raw.githubusercontent.com/alecthw/chnlist/release/Providers/Custom/CustomDirect.yaml
@@ -528,6 +524,10 @@ rule-providers:
   China_Domain:
     behavior: domain
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.yaml
+    interval: 43200
+  Lan:
+    behavior: classical
+    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.yaml
     interval: 43200
 
 # Panel
