@@ -76,6 +76,10 @@ DOMAIN-SUFFIX,iaccess.huawei.com
 DOMAIN-SUFFIX,uni-iaccess.huawei.com
 DOMAIN-SUFFIX,connectivitycheck.platform.hicloud.com
 
+# GOPROXY
+DOMAIN-SUFFIX,goproxy.io
+DOMAIN-SUFFIX,goproxy.cn
+
 # Custom
 DOMAIN-SUFFIX,ipip.net
 DOMAIN-SUFFIX,163.com
