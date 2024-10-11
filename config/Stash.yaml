@@ -540,8 +540,7 @@ rule-providers:
 # https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/Redirect/Redirect.stoverride
 
 # Ads Filter
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Surge/AdvertisingLite/AdvertisingLite.sgmodule
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/AdvertisingLite/AdvertisingLite.stoverride
+# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/AdvertisingLite/AdvertisingLite.stoverride 引起不少问题，不建议使用
 # https://raw.githubusercontent.com/app2smile/rules/master/module/bilibili.stoverride
 # https://raw.githubusercontent.com/app2smile/rules/master/module/tieba.stoverride
 
