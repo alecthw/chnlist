@@ -63,6 +63,7 @@ DOMAIN-SUFFIX,xiaomisub.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-KEYWORD,sub.sanfen
+IP-CIDR,59.80.54.192/32
 
 # Pornemby
 DOMAIN,sgtv.ii00.cc
