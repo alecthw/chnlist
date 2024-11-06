@@ -536,16 +536,20 @@ rule-providers:
 # BoxJS, http://boxjs.com
 # https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.stash.stoverride
 
+# Script Hub, https://github.com/Script-Hub-Org/Script-Hub/wiki
+# https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/modules/script-hub.stash.stoverride
+
 # Common
 # https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/Redirect/Redirect.stoverride
 
 # Ads Filter
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/AdvertisingLite/AdvertisingLite.stoverride 引起不少问题，不建议使用
+# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/AdvertisingLite/AdvertisingLite.stoverride  引起不少问题，不建议使用
 # https://raw.githubusercontent.com/app2smile/rules/master/module/bilibili.stoverride
 # https://raw.githubusercontent.com/app2smile/rules/master/module/tieba.stoverride
 
-# Apple App unlock
-# https://raw.githubusercontent.com/VirgilClyne/iRingo/main/stoverride/TestFlight.stoverride
+# Apple App unlock, https://nsringo.github.io
+# https://github.com/NSRingo/TestFlight/releases/latest/download/TestFlight.stoverride
+# https://github.com/NSRingo/WeatherKit/releases/latest/download/WeatherKit.stoverride
 
 # Other app unlock
 # https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/KuWoMusic/KuWoMusic.Stash.stoverride
