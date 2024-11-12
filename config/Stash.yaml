@@ -356,7 +356,6 @@ rules:
   - RULE-SET,CustomReject,AdBlock,no-resolve
   - RULE-SET,AdvertisingLite,AdBlock,no-resolve
   - RULE-SET,AdvertisingLite_Domain,AdBlock,no-resolve
-  - RULE-SET,ZhihuAds,AdBlock,no-resolve
   - RULE-SET,Apple,Apple,no-resolve
   - RULE-SET,Apple_Domain,Apple,no-resolve
   - RULE-SET,ChinaMedia,Domestic,no-resolve
@@ -412,10 +411,6 @@ rule-providers:
   AdvertisingLite_Domain:
     behavior: domain
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AdvertisingLite/AdvertisingLite_Domain.yaml
-    interval: 43200
-  ZhihuAds:
-    behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ZhihuAds/ZhihuAds.yaml
     interval: 43200
   Apple:
     behavior: classical
@@ -530,6 +525,12 @@ rule-providers:
     url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.yaml
     interval: 43200
 
+# 建议的覆写
+
+# Apple App unlock, https://nsringo.github.io
+# https://github.com/NSRingo/TestFlight/releases/latest/download/TestFlight.stoverride
+# https://github.com/NSRingo/WeatherKit/releases/latest/download/WeatherKit.stoverride
+
 # Panel
 # https://raw.githubusercontent.com/xream/scripts/main/surge/modules/network-info/net-lsp-x.stoverride
 
@@ -543,13 +544,12 @@ rule-providers:
 # https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/Redirect/Redirect.stoverride
 
 # Ads Filter
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/AdvertisingLite/AdvertisingLite.stoverride  引起不少问题，不建议使用
-# https://raw.githubusercontent.com/app2smile/rules/master/module/bilibili.stoverride
-# https://raw.githubusercontent.com/app2smile/rules/master/module/tieba.stoverride
 
-# Apple App unlock, https://nsringo.github.io
-# https://github.com/NSRingo/TestFlight/releases/latest/download/TestFlight.stoverride
-# https://github.com/NSRingo/WeatherKit/releases/latest/download/WeatherKit.stoverride
+# 墨鱼去广告，https://github.com/ddgksf2013/ddgksf2013
+# https://whatshub.top/stoverride/startingad.stoverride
+# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/script/zheye/zheye.stoverride
+# https://whatshub.top/stoverride/YouTubeAd.stoverride
+# https://raw.githubusercontent.com/app2smile/rules/refs/heads/master/module/tieba.stoverride
 
 # Other app unlock
 # https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/KuWoMusic/KuWoMusic.Stash.stoverride
