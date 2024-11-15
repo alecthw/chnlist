@@ -1,8 +1,8 @@
 /*******************************
 
-QuantumultX重写转换Surge重写时
+QuantumultX 重写转换 Surge 重写时
 
-匹配QuantumultX的reject-200规则
+匹配 QuantumultX 的reject-200 规则
 
 {name} = type=http-request,pattern={pattern},script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/Surge_reject-200.js
 *******************************/
