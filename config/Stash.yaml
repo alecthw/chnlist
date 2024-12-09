@@ -528,8 +528,8 @@ rule-providers:
 # 建议配合使用的覆写
 
 # Apple App unlock, https://nsringo.github.io
-# https://github.com/NSRingo/TestFlight/releases/latest/download/TestFlight.stoverride
-# https://github.com/NSRingo/WeatherKit/releases/latest/download/WeatherKit.stoverride
+# https://github.com/NSRingo/TestFlight/releases/latest/download/iRingo.TestFlight.stoverride
+# https://github.com/NSRingo/WeatherKit/releases/latest/download/iRingo.WeatherKit.stoverride
 
 # Panel
 # https://raw.githubusercontent.com/xream/scripts/main/surge/modules/network-info/net-lsp-x.stoverride
