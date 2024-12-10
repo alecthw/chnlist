@@ -1,0 +1,10 @@
+#!name=阿里云盘
+#!desc=
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js
+
+[Script]
+阿里云盘-1 = type=http-response,pattern=^https?:\/\/(api|member)\.(aliyundrive|alipan)\.com\/(.+\/(users|activity|user\/get)|((business|apps)\/.+\/users|adrive\/.+\/user)),requires-body=1,script-path=https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js
+
+[MITM]
+hostname = %APPEND% *.aliyundrive.com, *.alipan.com
