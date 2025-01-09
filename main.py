@@ -69,7 +69,6 @@ mosdns_blacklist_urls = [
 ]
 
 quanx_script_urls = {
-    "阿里云盘": "https://raw.githubusercontent.com/chxm1023/Rewrite/main/alidrive.js",
     "百度网盘": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js",
     "百度文库": "https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf",
 
