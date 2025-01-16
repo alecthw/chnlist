@@ -58,11 +58,12 @@ DOMAIN-SUFFIX,parkson-market.org
 DOMAIN-SUFFIX,nobodys.uk
 DOMAIN-SUFFIX,central-world.org
 DOMAIN-SUFFIX,terminal69.win
+DOMAIN-SUFFIX,tls.tips
 DOMAIN-SUFFIX,xiaomisub.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-KEYWORD,sub.sanfen
-IP-CIDR,59.80.54.192/32
+IP-CIDR,103.150.11.56/32
 
 # Pornemby
 DOMAIN,sgtv.ii00.cc
