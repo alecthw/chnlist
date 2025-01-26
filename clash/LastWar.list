@@ -1,7 +1,6 @@
-DOMAIN,lastwar-cdn.akamaized.net
-DOMAIN,lastwar-chat-us-gcp-ali.lastwargame.com
-DOMAIN,lastwar-chat-wss-us-ali.lastwargame.com
-DOMAIN,lastwar-serverlist-us-cf-ali.lastwarapp.com
-DOMAIN,lastwar-serverlist-us-aws-ali.lastwargame.com
+DOMAIN-SUFFIX,lastwarapp.com
+DOMAIN-SUFFIX,lastwargame.com
 DOMAIN-SUFFIX,rivergame.net
+DOMAIN,lastwar-cdn.akamaized.net
+DOMAIN-KEYWORD,lastwardev
 DOMAIN-KEYWORD,lastwar-
