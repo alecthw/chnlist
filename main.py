@@ -33,6 +33,9 @@ clash_ip_types = [
 
 mosdns_whitelist_urls = [
     "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomDirect.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyPorn.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyTerminus.list",
+    "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyTLS.list",
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.yaml",
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Domain.yaml",
