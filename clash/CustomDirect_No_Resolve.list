@@ -44,12 +44,8 @@ IP-CIDR6,2001:dc7:1000::1/128,no-resolve
 DOMAIN-SUFFIX,rubyfish.cn
 
 # Github proxy
-DOMAIN-SUFFIX,ghproxy.com
-DOMAIN-SUFFIX,ghproxy.net
 DOMAIN-SUFFIX,gitclone.com
-DOMAIN-SUFFIX,fgit.gq
-DOMAIN-SUFFIX,fgit.ml
-DOMAIN-SUFFIX,yzuu.cf
+DOMAIN-SUFFIX,ghfast.top
 
 # Subscribe
 DOMAIN-SUFFIX,mmcgtm.lol
@@ -95,7 +91,5 @@ DOMAIN-SUFFIX,plex.tv
 DOMAIN-SUFFIX,plex.direct
 DOMAIN-SUFFIX,fileball.app
 DOMAIN-SUFFIX,revenuecat.com
-DOMAIN-SUFFIX,goindex.space
 DOMAIN-SUFFIX,ideame.top
 DOMAIN-SUFFIX,wegod.cc
-DOMAIN-SUFFIX,projectv.cc

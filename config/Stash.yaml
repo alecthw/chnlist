@@ -46,8 +46,6 @@ dns:
   fake-ip-filter:
     - "*.sn.mynetname.net"
     - "*.jsdelivr.net"
-    - "*.ghproxy.com"
-    - "gh.goindex.space"
 
 proxy-providers:
   Subscribe:
