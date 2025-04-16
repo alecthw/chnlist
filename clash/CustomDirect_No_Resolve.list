@@ -40,11 +40,17 @@ IP-CIDR,1.2.4.8/32,no-resolve
 IP-CIDR,210.2.4.8/32,no-resolve
 IP-CIDR6,2001:dc7:1000::1/128,no-resolve
 
+# OneDNS
+DOMAIN-SUFFIX,onedns.net
+IP-CIDR,117.50.10.10/32
+IP-CIDR,117.50.11.11/32
+IP-CIDR,52.80.52.52/32
+IP-CIDR,52.80.66.66/32
+IP-CIDR6,2400:7fc0:849e:200::8/128
+IP-CIDR6,2404:c2c0:85d8:901::8/128
+
 # rubyfish dns
 DOMAIN-SUFFIX,rubyfish.cn
-
-# Github proxy
-DOMAIN-SUFFIX,gitclone.com
 
 # Subscribe
 DOMAIN-SUFFIX,mmcgtm.lol
@@ -59,10 +65,6 @@ DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-KEYWORD,sub.sanfen
 IP-CIDR,103.150.11.56/32,no-resolve
-
-# Pornemby
-DOMAIN,sgtv.ii00.cc
-DOMAIN,sptv.ii00.cc
 
 # Huawei
 DOMAIN-SUFFIX,huawei.com
