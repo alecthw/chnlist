@@ -1,0 +1,9 @@
+#!name=Github 429
+#!desc=解除 Github 429 限制
+#!category=chnlist
+
+[Header Rewrite]
+http-request ^https?:\/\/.+\.githubusercontent\.com header-replace Accept-Language en-US
+
+[MITM]
+hostname = %APPEND% *.githubusercontent.com

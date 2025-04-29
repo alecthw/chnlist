@@ -1,0 +1,8 @@
+#!name=Github 429
+#!desc=解除 Github 429 限制
+
+[Rewrite]
+^https?:\/\/.+\.githubusercontent\.com header-replace Accept-Language en-US
+
+[Mitm]
+hostname = *.githubusercontent.com
