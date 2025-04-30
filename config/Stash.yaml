@@ -566,6 +566,9 @@ rule-providers:
 
 # 建议配合使用的覆写
 
+# Github 429 Error
+# https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/main/module/Github_429.stoverride
+
 # Apple App unlock, https://nsringo.github.io
 # https://github.com/NSRingo/TestFlight/releases/latest/download/iRingo.TestFlight.stoverride
 # https://github.com/NSRingo/WeatherKit/releases/latest/download/iRingo.WeatherKit.stoverride
