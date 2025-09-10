@@ -53,9 +53,6 @@ IP-CIDR6,2404:c2c0:85d8:901::8/128
 DOMAIN-SUFFIX,rubyfish.cn
 
 # Subscribe
-DOMAIN-SUFFIX,kineticbloom.org
-DOMAIN-SUFFIX,mmcgtm.lol
-DOMAIN-SUFFIX,nexconvert.com
 DOMAIN-SUFFIX,parkson-market.org
 DOMAIN-SUFFIX,nobodys.uk
 DOMAIN-SUFFIX,central-world.org

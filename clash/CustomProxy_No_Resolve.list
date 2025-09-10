@@ -69,6 +69,11 @@ DOMAIN-SUFFIX,jp.tiar.app
 DOMAIN-SUFFIX,dot.tiar.app
 DOMAIN-SUFFIX,jp.tiarap.org
 
+# Subscribe
+DOMAIN-SUFFIX,kineticbloom.org
+DOMAIN-SUFFIX,mmcgtm.lol
+DOMAIN-SUFFIX,nexconvert.com
+
 # Custom
 DOMAIN-SUFFIX,cp.cloudflare.com
 DOMAIN-SUFFIX,v2ex.com
