@@ -62,7 +62,7 @@ DOMAIN-SUFFIX,xiaomisub.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-KEYWORD,sub.sanfen
-IP-CIDR,103.150.11.56/32,no-resolve
+IP-CIDR,38.207.152.59/32,no-resolve
 
 # Huawei
 DOMAIN-SUFFIX,huawei.com
