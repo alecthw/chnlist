@@ -53,14 +53,16 @@ IP-CIDR6,2404:c2c0:85d8:901::8/128
 DOMAIN-SUFFIX,rubyfish.cn
 
 # Subscribe
-DOMAIN-SUFFIX,parkson-market.org
+DOMAIN-SUFFIX,siamparagon.org
 DOMAIN-SUFFIX,nobodys.uk
 DOMAIN-SUFFIX,central-world.org
-DOMAIN-SUFFIX,terminal69.win
+DOMAIN-SUFFIX,parkson-market.org
+DOMAIN-SUFFIX,tagss.pro
 DOMAIN-SUFFIX,tls.tips
 DOMAIN-SUFFIX,xiaomisub.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
+DOMAIN-SUFFIX,thundermouse.cc
 DOMAIN-KEYWORD,sub.sanfen
 IP-CIDR,38.207.152.52/32,no-resolve
 
