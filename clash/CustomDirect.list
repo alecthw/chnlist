@@ -57,8 +57,7 @@ DOMAIN-SUFFIX,siamparagon.org
 DOMAIN-SUFFIX,nobodys.uk
 DOMAIN-SUFFIX,central-world.org
 DOMAIN-SUFFIX,parkson-market.org
-DOMAIN-SUFFIX,tagss.pro
-DOMAIN-SUFFIX,tls.tips
+DOMAIN-WILDCARD,tagss*.pro
 DOMAIN-SUFFIX,xiaomisub.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-SUFFIX,smallstrawberry.com
