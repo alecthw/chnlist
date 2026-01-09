@@ -119,7 +119,8 @@ def gen_dnsmasq(name, dns):
                 is_only_cn = True
                 item = item.replace('@cn', '')
 
-            item_file = item.replace('include:', '')
+            item_include = item.replace('include:', '')
+            item_file = item_include.split('#', 1)[0].rstrip()
             with open("data/geosite/{:s}".format(item_file), 'r', encoding='utf-8') as f:
                 content = f.read().splitlines()
 
