@@ -32,6 +32,7 @@ clash_ip_types = [
 ]
 
 mosdns_whitelist_urls = [
+    "https://rawstatic.com/nexitallyy/ProxyRules/main/Extra_CN_3.list",
     "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/CustomDirect.list",
     "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.list",
     "https://raw.githubusercontent.com/alecthw/chnlist/main/clash/EmbyPorn.list",
