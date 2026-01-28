@@ -52,6 +52,13 @@ IP-CIDR6,2404:c2c0:85d8:901::8/128
 # rubyfish dns
 DOMAIN-SUFFIX,rubyfish.cn
 
+# Nexitally dns
+DOMAIN-SUFFIX,durable0762.com
+DOMAIN-SUFFIX,delirium9599.com
+DOMAIN-SUFFIX,wrecking7857.com
+DOMAIN-SUFFIX,carrousel6917.com
+DOMAIN-SUFFIX,simmering3378.com
+
 # Subscribe
 DOMAIN-SUFFIX,kineticbloom.org
 DOMAIN-SUFFIX,siamparagon.org
