@@ -65,13 +65,17 @@ DOMAIN-SUFFIX,siamparagon.org
 DOMAIN-SUFFIX,nobodys.uk
 DOMAIN-SUFFIX,central-world.org
 DOMAIN-SUFFIX,parkson-market.org
-DOMAIN-WILDCARD,*.tagss*.pro
+DOMAIN-SUFFIX,tagxx.vip
+DOMAIN-SUFFIX,tagweb.vip
+DOMAIN-WILDCARD,tagss*.pro
+DOMAIN-KEYWORD,tagss
 DOMAIN-WILDCARD,*.xiaomisub*.cc
+DOMAIN-KEYWORD,xiaomisub
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-WILDCARD,*.xjkpsub*.cc
+DOMAIN-KEYWORD,xjkpsub
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-SUFFIX,thundermouse.cc
-DOMAIN-KEYWORD,sub.sanfen
 DOMAIN-SUFFIX,83289483.org
 IP-CIDR,38.207.152.52/32
 
