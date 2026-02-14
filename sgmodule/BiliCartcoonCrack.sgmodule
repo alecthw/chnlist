@@ -1,0 +1,10 @@
+#!name=逼哩涩漫
+#!desc=逼哩涩漫解锁付费动漫
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js
+
+[Script]
+逼哩涩漫-1 = type=http-response,pattern=^https?:\/\/.*\/api\/app\/(user\/info|cartoon\/play|photo\/detail),requires-body=1,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/BiliCartcoonCrack.js
+
+[MITM]
+hostname = %APPEND% etryj.avjfph.com, zhfvd.rjxxqf.com, ryuhf.jmzkwt.com, ovhdo.cjppdp.com

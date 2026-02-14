@@ -1,0 +1,11 @@
+#!name=Javbd
+#!desc=javdb 解锁永久会员
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js
+
+[Script]
+Javbd-1 = type=http-response,pattern=^https?:\/\/.*\/api\/v1\/users,requires-body=1,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/javbdvipcrack.js
+Javbd-2 = type=http-request,pattern=^https?:\/\/.*\/api\/v1\/(movies\/.*\/play|startup),script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/javdbvipcrack.js
+
+[MITM]
+hostname = %APPEND% api.pxxgg.xyz, api.ujvnmkx.cn, jdforrepam.com, api.yijingluowangluo.xyz, api.wwwuh5.cn, api.hechuangxinxi.xyz
