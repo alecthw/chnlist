@@ -92,6 +92,13 @@ DOMAIN-SUFFIX,connectivitycheck.platform.hicloud.com
 DOMAIN-SUFFIX,goproxy.io
 DOMAIN-SUFFIX,goproxy.cn
 
+# LLM Api
+DOMAIN-SUFFIX,api.nvidia.com
+DOMAIN-SUFFIX,cubence.com
+DOMAIN-SUFFIX,packyapi.com
+DOMAIN-SUFFIX,duckcoding.ai
+DOMAIN-SUFFIX,openclaudecode.cn
+
 # Custom
 DOMAIN-SUFFIX,ipip.net
 DOMAIN-SUFFIX,163.com
