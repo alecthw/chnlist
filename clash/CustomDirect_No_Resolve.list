@@ -93,7 +93,6 @@ DOMAIN-SUFFIX,goproxy.io
 DOMAIN-SUFFIX,goproxy.cn
 
 # LLM Api
-DOMAIN-SUFFIX,api.nvidia.com
 DOMAIN-SUFFIX,cubence.com
 DOMAIN-SUFFIX,packyapi.com
 DOMAIN-SUFFIX,duckcoding.ai
