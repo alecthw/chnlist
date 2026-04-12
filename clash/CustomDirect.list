@@ -68,18 +68,14 @@ DOMAIN-SUFFIX,parkson-market.org
 DOMAIN-SUFFIX,tagxx.vip
 DOMAIN-SUFFIX,tagweb.vip
 DOMAIN-WILDCARD,tagss*.pro
-DOMAIN-KEYWORD,tagss
+DOMAIN-SUFFIX,xmtzapp.cc
 DOMAIN-WILDCARD,*.xiaomisub*.cc
-DOMAIN-KEYWORD,xiaomisub
+DOMAIN-SUFFIX,xjkpapp.cc
 DOMAIN-SUFFIX,xjsublink.com
 DOMAIN-WILDCARD,*.xjkpsub*.cc
-DOMAIN-KEYWORD,xjkpsub
 DOMAIN-SUFFIX,smallstrawberry.com
 DOMAIN-SUFFIX,thundermouse.cc
 DOMAIN-SUFFIX,xdmjichang.cc
-DOMAIN-KEYWORD,sanfen
-DOMAIN-SUFFIX,83289483.org
-IP-CIDR,38.207.152.52/32
 
 # Huawei
 DOMAIN-SUFFIX,huawei.com
