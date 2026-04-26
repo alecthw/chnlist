@@ -1,0 +1,12 @@
+payload:
+  - DOMAIN,openrouter.ai
+  - DOMAIN,integrate.api.nvidia.com
+  - DOMAIN,generativelanguage.googleapis.com
+  - DOMAIN,api.anthropic.com
+  - DOMAIN,api.groq.com
+  - DOMAIN,api.minimax.io
+  - DOMAIN,api.mistral.ai
+  - DOMAIN,api.moonshot.ai
+  - DOMAIN,api.openai.com
+  - DOMAIN,api.x.ai
+  - DOMAIN-SUFFIX,openai.azure.com
