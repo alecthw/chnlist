@@ -230,6 +230,33 @@ def gen_mosdns_list(list_urls, out_name):
         out_f.writelines(list(mosdns_list))
 
 
+def gen_nftables_cnip(ip_url, set_name):
+    data = urllib.request.urlopen(ip_url).read().decode("utf-8")
+    cidrs = []
+    for line in data.splitlines():
+        line = line.strip()
+        if len(line) == 0 or line.startswith('#'):
+            continue
+        cidrs.append(line)
+
+    lines = []
+    lines.append("table inet filter {\n")
+    lines.append("    set {:s} {{\n".format(set_name))
+    lines.append("        type ipv4_addr\n")
+    lines.append("        flags interval\n")
+    lines.append("        auto-merge\n")
+    lines.append("        elements = {\n")
+    for i, cidr in enumerate(cidrs):
+        sep = "," if i < len(cidrs) - 1 else ""
+        lines.append("            {:s}{:s}\n".format(cidr, sep))
+    lines.append("        }\n")
+    lines.append("    }\n")
+    lines.append("}\n")
+
+    with open("publish/nftables/{:s}.nft".format(set_name), mode='w', encoding='utf-8') as out_f:
+        out_f.writelines(lines)
+
+
 def quanx_script_2_sgmodule(script_urls):
     for name, script_url in script_urls.items():
         file_name = script_url.split("/")[-1].replace(".js", "").replace(".conf", "")
@@ -354,6 +381,7 @@ if __name__ == '__main__':
         os.makedirs("publish/ProvidersD/Custom")
         os.makedirs("publish/mosdns")
         os.makedirs("publish/sgmodule")
+        os.makedirs("publish/nftables")
     load_exclude_domains()
 
     #gen_dnsmasq('direct', '223.5.5.5')
@@ -364,3 +392,6 @@ if __name__ == '__main__':
     gen_mosdns_list(mosdns_blacklist_urls, "blacklist.list")
 
     quanx_script_2_sgmodule(quanx_script_urls)
+
+    gen_nftables_cnip("https://ispip.clang.cn/all_cn.txt", "cn4")
+    gen_nftables_cnip("https://ispip.clang.cn/hk.txt", "hk4")
