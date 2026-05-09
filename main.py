@@ -240,16 +240,14 @@ def gen_nftables_cnip(ip_url, set_name):
         cidrs.append(line)
 
     lines = []
-    lines.append("table inet filter {\n")
-    lines.append("    set {:s} {{\n".format(set_name))
-    lines.append("        type ipv4_addr\n")
-    lines.append("        flags interval\n")
-    lines.append("        auto-merge\n")
-    lines.append("        elements = {\n")
+    lines.append("set {:s} {{\n".format(set_name))
+    lines.append("    type ipv4_addr\n")
+    lines.append("    flags interval\n")
+    lines.append("    auto-merge\n")
+    lines.append("    elements = {\n")
     for i, cidr in enumerate(cidrs):
         sep = "," if i < len(cidrs) - 1 else ""
-        lines.append("            {:s}{:s}\n".format(cidr, sep))
-    lines.append("        }\n")
+        lines.append("        {:s}{:s}\n".format(cidr, sep))
     lines.append("    }\n")
     lines.append("}\n")
 
