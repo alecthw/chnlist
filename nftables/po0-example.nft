@@ -1,0 +1,108 @@
+#!/usr/sbin/nft -f
+
+# SSH 端口
+define SSH_PORT = 22
+
+# po0 内网地址
+define RELAY_LAN_IP = 10.100.0.10
+
+# 线路 1：香港
+define PORT_IN_1   = 30001
+define DEST_IP4_1  = 203.0.113.10
+define DEST_PORT_1 = 30001
+
+# 线路 2：日本
+define PORT_IN_2   = 30002
+define DEST_IP4_2  = 198.51.100.20
+define DEST_PORT_2 = 30002
+
+flush ruleset
+
+table inet nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+
+        # 访问 po0 监听端口的 TCP/UDP 流量，转发到 rfc/po0 出口机的对应端口
+        meta l4proto { tcp, udp } th dport $PORT_IN_1 dnat to $DEST_IP4_1:$DEST_PORT_1
+        meta l4proto { tcp, udp } th dport $PORT_IN_2 dnat to $DEST_IP4_2:$DEST_PORT_2
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+
+        # 发往出口机的流量，把源地址改为 po0 内网 IP
+        ip daddr $DEST_IP4_1 meta l4proto { tcp, udp } th dport $DEST_PORT_1 snat to $RELAY_LAN_IP
+        ip daddr $DEST_IP4_2 meta l4proto { tcp, udp } th dport $DEST_PORT_2 snat to $RELAY_LAN_IP
+    }
+}
+
+table inet filter {
+    # CN IPV4: https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/release/nftables/cn4.nft
+    include "/etc/nftables/cn4.nft"
+
+    set relay_dst {
+        type ipv4_addr
+        elements = { $DEST_IP4_1, $DEST_IP4_2 }
+    }
+
+    set lan4 {
+        type ipv4_addr
+        flags interval
+        elements = {
+            10.0.0.0/8,
+            172.16.0.0/12,
+            192.168.0.0/16
+        }
+    }
+
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # 放行已建立连接
+        ct state established,related accept
+
+        # 放行本地回环接口
+        iif lo accept
+
+        # 允许中国大陆 IPv4 连接 SSH
+        ip saddr @cn4 tcp dport $SSH_PORT accept
+
+        # 其他全部拒绝
+        reject with icmpx type admin-prohibited
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+
+        # 放行已建立连接
+        ct state established,related accept
+
+        # MSS 调整，减少 MTU 不匹配导致的速度慢或断流
+        ip saddr @cn4 ip daddr @relay_dst tcp flags syn tcp option maxseg size set 1452
+
+        # 允许中国大陆 IPv4 访问 rfc/po0 出口机
+        ip saddr @cn4 ip daddr @relay_dst accept
+
+        # 其他全部拒绝
+        reject with icmpx type admin-prohibited
+    }
+
+    chain output {
+        type filter hook output priority 0; policy drop;
+
+        # 放行已建立连接
+        ct state established,related accept
+
+        # 允许访问局域网 IPv4
+        ip daddr @lan4 accept
+
+        # 允许访问中国大陆 IPv4
+        ip daddr @cn4 accept
+
+        # 允许访问 rfc/po0 出口机
+        ip daddr @relay_dst accept
+
+        # 其他全部拒绝
+        reject with icmpx type admin-prohibited
+    }
+}
