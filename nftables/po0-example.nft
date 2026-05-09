@@ -63,12 +63,12 @@ table ip filter {
             198.51.100.0/24,
             203.0.113.0/24,
             224.0.0.0/4,
-            240.0.0.0/4,
-            255.255.255.255/32
+            240.0.0.0/4
         }
     }
 
     chain input {
+        # 默认丢弃
         type filter hook input priority filter; policy drop;
 
         # 放行已建立连接
@@ -79,12 +79,10 @@ table ip filter {
 
         # 允许中国大陆 IPv4 连接 SSH
         ip saddr @cn4 tcp dport $SSH_PORT accept
-
-        # 其他全部拒绝
-        reject with icmpx type admin-prohibited
     }
 
     chain forward {
+        # 默认丢弃
         type filter hook forward priority filter; policy drop;
 
         # 放行已建立连接
@@ -95,12 +93,10 @@ table ip filter {
 
         # 允许中国大陆 IPv4 访问 rfc/po0 出口机
         ip saddr @cn4 ip daddr @relay_dst accept
-
-        # 其他全部拒绝
-        reject with icmpx type admin-prohibited
     }
 
     chain output {
+        # 默认丢弃
         type filter hook output priority filter; policy drop;
 
         # 放行已建立连接
@@ -114,8 +110,5 @@ table ip filter {
 
         # 允许访问 rfc/po0 出口机
         ip daddr @relay_dst accept
-
-        # 其他全部拒绝
-        reject with icmpx type admin-prohibited
     }
 }
