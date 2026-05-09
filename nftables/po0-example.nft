@@ -1,17 +1,19 @@
 #!/usr/sbin/nft -f
 
+# 仅适用于 po0，千万注意 DEST_IP 是否是 po0 内网 IP 或者 rfc 的 IP
+
 # SSH 端口
 define SSH_PORT = 22
 
 # po0 内网地址
 define RELAY_LAN_IP = 10.100.0.10
 
-# 线路 1：香港
+# 线路 1: 香港
 define PORT_IN_1   = 30001
 define DEST_IP_1  = 203.0.113.10
 define DEST_PORT_1 = 30001
 
-# 线路 2：日本
+# 线路 2: 日本
 define PORT_IN_2   = 30002
 define DEST_IP_2  = 198.51.100.20
 define DEST_PORT_2 = 30002
@@ -22,7 +24,7 @@ table ip nat {
     chain prerouting {
         type nat hook prerouting priority dstnat; policy accept;
 
-        # 访问 po0 监听端口的 TCP/UDP 流量，转发到 rfc/po0 出口机的对应端口
+        # 访问 po0 监听端口的 TCP/UDP 流量，将目的 IP/Port 修改成 rfc/po0 出口机的对应 IP/Port
         meta l4proto { tcp, udp } th dport $PORT_IN_1 dnat to $DEST_IP_1:$DEST_PORT_1
         meta l4proto { tcp, udp } th dport $PORT_IN_2 dnat to $DEST_IP_2:$DEST_PORT_2
     }
@@ -30,14 +32,14 @@ table ip nat {
     chain postrouting {
         type nat hook postrouting priority srcnat; policy accept;
 
-        # 发往出口机的流量，把源地址改为 po0 内网 IP
+        # 发往 rfc/po0 出口机的流量，把源地址改为 po0 内网 IP
         ip daddr $DEST_IP_1 meta l4proto { tcp, udp } th dport $DEST_PORT_1 snat to $RELAY_LAN_IP
         ip daddr $DEST_IP_2 meta l4proto { tcp, udp } th dport $DEST_PORT_2 snat to $RELAY_LAN_IP
     }
 }
 
 table ip filter {
-    # CN IPV4: https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/release/nftables/cn4.nft
+    # CN IPv4 Set: https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/release/nftables/cn4.nft
     include "/etc/nftables/cn4.nft"
 
     set relay_dst {
