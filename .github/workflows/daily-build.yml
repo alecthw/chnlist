@@ -47,6 +47,19 @@ jobs:
           git clone -b $REPO_BRANCH $REPO_URL
           mv -f domain-list-community/data chnlist/data/geosite
 
+      - name: Download extra rules
+        env:
+          EXTRA_RULE_URLS: |
+            https://raw.githubusercontent.com/nexitallyy/ProxyRules/refs/heads/main/ApplePush.list
+            https://raw.githubusercontent.com/nexitallyy/ProxyRules/refs/heads/main/Extra_AI.list
+            https://raw.githubusercontent.com/nexitallyy/ProxyRules/refs/heads/main/Extra_CN_3.list
+            https://raw.githubusercontent.com/nexitallyy/ProxyRules/refs/heads/main/Extra_Crypto.list
+            https://raw.githubusercontent.com/nexitallyy/ProxyRules/refs/heads/main/Extra_Proxies.list
+        run: |
+          for url in $EXTRA_RULE_URLS; do
+            curl -fsSL "$url" -o "chnlist/clash/$(basename "$url")"
+          done
+
       - name: Clone ACL4SSR
         env:
           REPO_URL: https://github.com/ACL4SSR/ACL4SSR
