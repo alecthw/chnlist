@@ -51,36 +51,6 @@
 - openclash 预置 clash_meta 内核。
 - mosdns 使用了 [自己的修改版](https://github.com/alecthw/mosdns)，支持 MMDB GeoIP 匹配。
 
-待补充.....
-
-## 手机 & PC
-
-手机、电脑等中可使用的客户端。
-
-### iOS--Surge
-
-待补充.....
-
-### iOS--Loon
-
-待补充.....
-
-### iOS--Stash
-
-待补充.....
-
-### iOS--QuantumultX
-
-待补充.....
-
-### iOS--Shadowrocket
-
-待补充.....
-
-### Android--[Clash.Meta for Android](https://github.com/MetaCubeX/ClashMetaForAndroid/releases/tag/Prerelease-alpha)
-
-待补充.....
-
 ## 关于 no-resolve
 
 当匹配遇到 IP 相关的规则时，会触发 DNS 解析。`no-resolve` 可以跳过这个过程。

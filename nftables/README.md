@@ -10,7 +10,7 @@
 
 需先下载 China ip 地址 set
 
-- <https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/release/nftables/cn4.nft>
+- <https://raw.githubusercontent.com/alecthw/chnlist/release/nftables/cn4.nft>
 
 该文件每日从 clang.cn 拉取地址表自动生成。不过由于 po0 禁 http/https，就不用设置每日自动更新了，也没必要每天更新。
 

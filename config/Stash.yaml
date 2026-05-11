@@ -29,17 +29,19 @@ dns:
   default-nameserver:
     - 223.5.5.5
     - 114.114.114.114
+    - system
   nameserver:
     # - https://dns.alidns.com/dns-query
     # - https://doh.pub/dns-query
-    - https://223.5.5.5/dns-query
+    - http3://223.5.5.5/dns-query
     - https://120.53.53.53/dns-query
   fallback:
     - https://8.8.4.4/dns-query
     - https://9.9.9.9/dns-query
     - https://1.0.0.1/dns-query
     - https://208.67.222.222/dns-query
-  # skip-cert-verify: true
+  skip-cert-verify: true
+  follow-rule: true
   # nameserver-policy:
   #   'www.baidu.com': 114.114.114.114
   #   '+.internal.crop.com': system
@@ -49,13 +51,13 @@ dns:
 
 proxy-providers:
   Subscribe:
-    url: https://raw.githubusercontent.com/alecthw/chnlist/main/config/Node/stash
+    url: https://rawstatic.com/alecthw/chnlist/main/config/Node/stash
     filter: ^(?!.*(Direct|Ad-))
     interval: 43200
 
 proxy-groups:
   - name: Proxy
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Rocket.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Rocket.png
     type: select
     proxies:
       - DIRECT
@@ -70,13 +72,13 @@ proxy-groups:
       - 🇺🇳 Special
       - 🛫 Airport
   - name: Domestic
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Direct.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Direct.png
     type: select
     proxies:
       - DIRECT
       - Proxy
   - name: AdBlock
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Advertising.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Advertising.png
     type: select
     proxies:
       - REJECT
@@ -85,7 +87,7 @@ proxy-groups:
 
   # Special
   - name: Game
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Game.png
     type: select
     proxies:
       - Domestic
@@ -105,7 +107,7 @@ proxy-groups:
 
   # Apple service
   - name: Apple
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Apple_1.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Apple_1.png
     type: select
     proxies:
       - Domestic
@@ -119,7 +121,7 @@ proxy-groups:
 
   # Media
   - name: TikTok
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/TikTok_2.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/TikTok_2.png
     type: select
     proxies:
       - 🇺🇸 US
@@ -130,7 +132,7 @@ proxy-groups:
       - Proxy
       - Domestic
   - name: DisneyPlus
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Disney%2B.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Disney.png
     type: select
     proxies:
       - 🇸🇬 SG
@@ -140,7 +142,7 @@ proxy-groups:
       - 🇨🇳 TW
       - Proxy
   - name: Netflix
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Netflix.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Netflix.png
     type: select
     proxies:
       - 🇸🇬 SG
@@ -150,7 +152,7 @@ proxy-groups:
       - 🇨🇳 TW
       - Proxy
   - name: Spotify
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Spotify.png
     type: select
     proxies:
       - 🇸🇬 SG
@@ -161,7 +163,7 @@ proxy-groups:
       - 🇮🇳 IN
       - Proxy
   - name: GlobalMedia
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ForeignMedia.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/ForeignMedia.png
     type: select
     proxies:
       - 🇺🇸 US
@@ -173,7 +175,7 @@ proxy-groups:
 
   # Other
   - name: Telegram
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Telegram_X.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Telegram_X.png
     type: select
     proxies:
       - Proxy
@@ -183,7 +185,7 @@ proxy-groups:
       - 🇺🇸 US
       - 🇨🇳 TW
   - name: Speedtest
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Speedtest.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Speedtest.png
     type: select
     proxies:
       - Domestic
@@ -194,7 +196,7 @@ proxy-groups:
       - 🇺🇸 US
       - 🇨🇳 TW
   - name: PayPal
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/PayPal.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/PayPal.png
     type: select
     proxies:
       - 🇺🇸 US
@@ -204,8 +206,8 @@ proxy-groups:
       - 🇨🇳 TW
       - Proxy
       - Domestic
-  - name: OpenAI
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Bot.png
+  - name: Crypto
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Cryptocurrency_1.png
     type: select
     proxies:
       - 🇺🇸 US
@@ -213,9 +215,10 @@ proxy-groups:
       - 🇸🇬 SG
       - 🇯🇵 JP
       - 🇨🇳 TW
-      - 🇺🇳 Special
+      - Proxy
+      - Domestic
   - name: Steam
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Steam.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Steam.png
     type: select
     proxies:
       - Domestic
@@ -228,7 +231,7 @@ proxy-groups:
       - 🇨🇳 TW
       - 🇺🇳 Special
   - name: Epic
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Epic_Games.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Epic_Games.png
     type: select
     proxies:
       - Domestic
@@ -241,7 +244,7 @@ proxy-groups:
       - 🇨🇳 TW
       - 🇺🇳 Special
   - name: Ubisoft
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Game.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Game.png
     type: select
     proxies:
       - Domestic
@@ -254,7 +257,7 @@ proxy-groups:
       - 🇨🇳 TW
       - 🇺🇳 Special
   - name: Xbox
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Xbox.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Xbox.png
     type: select
     proxies:
       - Domestic
@@ -268,7 +271,32 @@ proxy-groups:
       - 🇰🇷 KR
       - 🇺🇳 Special
   - name: Microsoft
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Microsoft.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Microsoft.png
+    type: select
+    proxies:
+      - Domestic
+      - Proxy
+      - 🇭🇰 HK
+      - 🇸🇬 SG
+      - 🇯🇵 JP
+      - 🇺🇸 US
+      - 🇨🇳 TW
+      - 🇰🇷 KR
+      - 🇺🇳 Special
+  - name: Google
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Google_Search.png
+    type: select
+    proxies:
+      - Proxy
+      - 🇭🇰 HK
+      - 🇸🇬 SG
+      - 🇯🇵 JP
+      - 🇺🇸 US
+      - 🇨🇳 TW
+      - 🇰🇷 KR
+      - 🇺🇳 Special
+  - name: LLMApiGlobal
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/AI.png
     type: select
     proxies:
       - Domestic
@@ -283,7 +311,7 @@ proxy-groups:
 
   # Final
   - name: Final
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Final.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Final.png
     type: select
     proxies:
       - Proxy
@@ -291,59 +319,59 @@ proxy-groups:
 
   # Area
   - name: 🇭🇰 HK
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Hong_Kong.png
     type: select
     include-all: true
     filter: (?i)(港|HK|Hong)
 
   - name: 🇸🇬 SG
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Singapore.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Singapore.png
     type: select
     include-all: true
     filter: (?i)(新加坡|坡|狮城|SG|Singapore)
 
   - name: 🇯🇵 JP
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Japan.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Japan.png
     type: select
     include-all: true
     filter: (?i)((\b日((?!用).)+)|日本|川日|东京|大阪|泉日|埼玉|沪日|深日|JP|Japan)
 
   - name: 🇺🇸 US
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_States.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/United_States.png
     type: select
     include-all: true
     filter: (?i)(\b美|美国|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥|\bUS|(United States))
 
   - name: 🇨🇳 TW
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Taiwan.png
     type: select
     include-all: true
     filter: (?i)(台|新北|彰化|TW|Tai)
 
   - name: 🇬🇧 UK
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_Kingdom.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/United_Kingdom.png
     type: select
     include-all: true
     filter: (?i)(英国|UK|伦敦|(United Kingdom)|GBR)
   - name: 🇰🇷 KR
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Korea.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Korea.png
     type: select
     include-all: true
     filter: (?i)(KR|Korea|KOR|首尔|韩|韓)
   - name: 🇮🇳 IN
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/India.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/India.png
     type: select
     include-all: true
     filter: (?i)(印度|孟买|新德里|班加罗尔|India)
 
   - name: 🇺🇳 Special
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/United_Nations.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/United_Nations.png
     type: select
     include-all: true
     filter: ^(?i)(?!.*(港|HK|Hong|新加坡|坡|狮城|SG|Singapore|(\b日((?!用).)+)|日本|川日|东京|大阪|泉日|埼玉|沪日|深日|JP|Japan|\b美|美国|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥|\bUS|(United States)|台|新北|彰化|TW|Tai|英国|UK|伦敦|(United Kingdom)|GBR|KR|Korea|KOR|首尔|韩|韓|印度|孟买|新德里|班加罗尔|India))
 
   - name: 🛫 Airport
-    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Airport.png
+    icon: https://rawstatic.com/Koolson/Qure/master/IconSet/Color/Airport.png
     type: select
     include-all: true
 
@@ -371,13 +399,15 @@ rules:
   - RULE-SET,Telegram,Telegram,no-resolve
   - RULE-SET,Speedtest,Speedtest,no-resolve
   - RULE-SET,PayPal,PayPal,no-resolve
-  - RULE-SET,OpenAI,OpenAI,no-resolve
+  - RULE-SET,Crypto,Crypto,no-resolve
   - RULE-SET,Steam,Steam,no-resolve
   - RULE-SET,Epic,Epic,no-resolve
   - RULE-SET,UBI,Ubisoft,no-resolve
   - RULE-SET,Ubisoft,Ubisoft,no-resolve
   - RULE-SET,Xbox,Xbox,no-resolve
   - RULE-SET,Microsoft,Microsoft,no-resolve
+  - RULE-SET,Google,Google,no-resolve
+  - RULE-SET,LLMApiGlobal,LLMApiGlobal,no-resolve
 
   # China Media
   - RULE-SET,ChinaMedia,Domestic,no-resolve
@@ -412,190 +442,200 @@ rule-providers:
   # Custom force
   CustomDirect:
     behavior: classical
-    url: https://raw.githubusercontent.com/alecthw/chnlist/release/Providers/Custom/CustomDirect.yaml
+    url: https://rawstatic.com/alecthw/chnlist/release/Providers/Custom/CustomDirect.yaml
     interval: 43200
   CustomProxy:
     behavior: classical
-    url: https://raw.githubusercontent.com/alecthw/chnlist/release/Providers/Custom/CustomProxy.yaml
+    url: https://rawstatic.com/alecthw/chnlist/release/Providers/Custom/CustomProxy.yaml
     interval: 43200
   Direct:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Direct/Direct.yaml
     interval: 43200
   CustomReject:
     behavior: classical
-    url: https://raw.githubusercontent.com/alecthw/chnlist/release/Providers/Custom/CustomReject.yaml
+    url: https://rawstatic.com/alecthw/chnlist/release/Providers/Custom/CustomReject.yaml
     interval: 43200
 
   # Ban Ads
   AdvertisingLite:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AdvertisingLite/AdvertisingLite.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/AdvertisingLite/AdvertisingLite.yaml
     interval: 43200
   AdvertisingLite_Domain:
     behavior: domain
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AdvertisingLite/AdvertisingLite_Domain.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/AdvertisingLite/AdvertisingLite_Domain.yaml
     interval: 43200
+
+  # Apple
   Apple:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.yaml
     interval: 43200
   Apple_Domain:
     behavior: domain
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Domain.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Domain.yaml
     interval: 43200
 
   # Download
   Download:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Download/Download.yaml
     interval: 43200
   GameDownloadCN:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownloadCN/GameDownloadCN.yaml
     interval: 43200
   GameDownload:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Game/GameDownload/GameDownload.yaml
     interval: 43200
 
   # APP
   Telegram:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.yaml
     interval: 43200
   Speedtest:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Speedtest/Speedtest.yaml
     interval: 43200
   PayPal:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/PayPal/PayPal.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/PayPal/PayPal.yaml
     interval: 43200
-  OpenAI:
+  Crypto:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/OpenAI/OpenAI.yaml
+    url: https://rawstatic.com/alecthw/chnlist/release/Providers/Custom/Extra_Crypto.yaml
     interval: 43200
   Steam:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.yaml
     interval: 43200
   Epic:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.yaml
     interval: 43200
   UBI:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/UBI/UBI.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/UBI/UBI.yaml
     interval: 43200
   Ubisoft:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Ubisoft/Ubisoft.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Ubisoft/Ubisoft.yaml
     interval: 43200
   Xbox:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Xbox/Xbox.yaml
     interval: 43200
   Microsoft:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.yaml
+    interval: 43200
+  Google:
+    behavior: classical
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Google/Google.yaml
+    interval: 43200
+  LLMApiGlobal:
+    behavior: classical
+    url: https://rawstatic.com/alecthw/chnlist/release/Providers/Custom/Extra_AI.yaml
     interval: 43200
 
   # China Media
   ChinaMedia:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMedia/ChinaMedia.yaml
     interval: 43200
 
   # Media
   TikTok:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.yaml
     interval: 43200
   Disney:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Disney/Disney.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Disney/Disney.yaml
     interval: 43200
   Netflix:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix.yaml
     interval: 43200
   Spotify:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Spotify/Spotify.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Spotify/Spotify.yaml
     interval: 43200
   AmazonPrimeVideo:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/AmazonPrimeVideo/AmazonPrimeVideo.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/AmazonPrimeVideo/AmazonPrimeVideo.yaml
     interval: 43200
   HBO:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/HBO/HBO.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/HBO/HBO.yaml
     interval: 43200
   GlobalMedia:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia.yaml
     interval: 43200
   GlobalMedia_Domain:
     behavior: domain
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia_Domain.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/GlobalMedia/GlobalMedia_Domain.yaml
     interval: 43200
 
   # Force proxy
   ProxyLite:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ProxyLite/ProxyLite.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/ProxyLite/ProxyLite.yaml
     interval: 43200
 
   # Force china direct
   China:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China.yaml
     interval: 43200
   China_Domain:
     behavior: domain
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/China/China_Domain.yaml
     interval: 43200
 
   # Local network, should be resolve, so put it last
   Lan:
     behavior: classical
-    url: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.yaml
+    url: https://rawstatic.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.yaml
     interval: 43200
 
 
 # 建议配合使用的覆写
 
 # Github 429 Error
-# https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/main/module/Github_429.stoverride
+# https://rawstatic.com/alecthw/chnlist/main/module/Github_429.stoverride
 
 # Apple App unlock, https://nsringo.github.io
 # https://github.com/NSRingo/TestFlight/releases/latest/download/iRingo.TestFlight.stoverride
 # https://github.com/NSRingo/WeatherKit/releases/latest/download/iRingo.WeatherKit.stoverride
 
 # Panel
-# https://raw.githubusercontent.com/xream/scripts/main/surge/modules/network-info/net-lsp-x.stoverride
+# https://rawstatic.com/xream/scripts/main/surge/modules/network-info/net-lsp-x.stoverride
 
 # BoxJS, http://boxjs.com
-# https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.stash.stoverride
+# https://rawstatic.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.stash.stoverride
 
 # Script Hub, https://github.com/Script-Hub-Org/Script-Hub/wiki
-# https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/modules/script-hub.stash.stoverride
+# https://rawstatic.com/Script-Hub-Org/Script-Hub/main/modules/script-hub.stash.stoverride
 
 # Common
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/Redirect/Redirect.stoverride
+# https://rawstatic.com/blackmatrix7/ios_rule_script/master/rewrite/Stash/Redirect/Redirect.stoverride
 
 # Ads Filter
 
 # 墨鱼去广告，https://github.com/ddgksf2013/ddgksf2013
 # https://whatshub.top/stoverride/startingad.stoverride
-# https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/script/zheye/zheye.stoverride
+# https://rawstatic.com/blackmatrix7/ios_rule_script/master/script/zheye/zheye.stoverride
 # https://whatshub.top/stoverride/YouTubeAd.stoverride
-# https://raw.githubusercontent.com/app2smile/rules/refs/heads/master/module/tieba.stoverride
+# https://rawstatic.com/app2smile/rules/master/module/tieba.stoverride
 
 # Other app unlock
-# https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/KuWoMusic/KuWoMusic.Stash.stoverride
-# https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/Nicegram/Stash.stoverride
-# https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/WPSOffice/Stash.stoverride
-# https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/Xmind/Xmind.Stash.stoverride
-# https://raw.githubusercontent.com/app2smile/rules/master/module/spotify.stoverride
+# https://rawstatic.com/I-am-R-E/Functional-Store-Hub/Master/KuWoMusic/KuWoMusic.Stash.stoverride
+# https://rawstatic.com/I-am-R-E/Functional-Store-Hub/Master/Nicegram/Stash.stoverride
+# https://rawstatic.com/I-am-R-E/Functional-Store-Hub/Master/WPSOffice/Stash.stoverride
+# https://rawstatic.com/I-am-R-E/Functional-Store-Hub/Master/Xmind/Xmind.Stash.stoverride
+# https://rawstatic.com/app2smile/rules/master/module/spotify.stoverride

@@ -39,7 +39,7 @@ table ip nat {
 }
 
 table ip filter {
-    # CN IPv4 Set: https://raw.githubusercontent.com/alecthw/chnlist/refs/heads/release/nftables/cn4.nft
+    # CN IPv4 Set: https://raw.githubusercontent.com/alecthw/chnlist/release/nftables/cn4.nft
     include "/etc/nftables/cn4.nft"
 
     set relay_dst {
