@@ -13,9 +13,13 @@
 2. `代理` 策略组拖到最下面，找到 `Subscribe` 策略组，长按选择 `编辑策略组`，拖到最下面，将 `外部代理列表` 里的 URL 改成你的订阅链接
 3. Enjoy
 
+### Egern
+
+加紧编写中......
+
 ### Loon
 
-1. `配置` 往下拖，找到 `所有配置文件`，点击右上角加号添加，填入  `https://rawstatic.com/alecthw/chnlist/main/config/Loon.conf`
+1. `配置` 往下拖，找到 `所有配置文件`，点击右上角加号添加，选择 `从链接导入`，填入  `https://rawstatic.com/alecthw/chnlist/main/config/Loon.conf`，`托管` 选项保持关闭
 2. `配置` 最上面 `所有节点`，找到 `Subscribe` 长按选择 `编辑`，将 `URL` 改成你的订阅链接
 3. Enjoy
 
