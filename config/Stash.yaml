@@ -48,6 +48,7 @@ dns:
   fake-ip-filter:
     - "*.sn.mynetname.net"
     - "*.jsdelivr.net"
+    - "rawstatic.com"
 
 proxy-providers:
   Subscribe:
@@ -375,7 +376,14 @@ proxy-groups:
     type: select
     include-all: true
 
+script:
+  shortcuts:
+    quic: network == 'udp' and dst_port == 443
+
 rules:
+  # Block QUIC
+  - SCRIPT,quic,REJECT
+
   # Custom force
   - RULE-SET,CustomDirect,Domestic,no-resolve
   - RULE-SET,CustomProxy,Proxy,no-resolve
