@@ -42,6 +42,9 @@ table ip filter {
     # CN IPv4 Set: https://raw.githubusercontent.com/alecthw/chnlist/release/nftables/cn4.nft
     include "/etc/nftables/cn4.nft"
 
+    # 基于 DDNS 的白名单 IPv4 Set，配合 generate_whitelist4.sh 使用
+    # include "/etc/nftables/whitelist4.nft"
+
     set relay_dst {
         type ipv4_addr
         elements = { $DEST_IP_1, $DEST_IP_2 }
@@ -95,6 +98,9 @@ table ip filter {
 
         # 允许中国大陆 IPv4 访问 rfc/po0 出口机
         ip saddr @cn4 ip daddr @relay_dst accept
+
+        # 基于 DDNS 的白名单 IPv4 Set，如需使用，可注释上面的 cn4 规则，并取消下面这行的注释
+        # ip saddr @whitelist4 tcp dport $SSH_PORT accept
     }
 
     chain output {
