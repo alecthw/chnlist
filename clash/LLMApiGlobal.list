@@ -9,3 +9,4 @@ DOMAIN,api.moonshot.ai
 DOMAIN,api.openai.com
 DOMAIN,api.x.ai
 DOMAIN-SUFFIX,openai.azure.com
+DOMAIN-SUFFIX,revenuecat.com
