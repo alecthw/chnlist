@@ -391,5 +391,9 @@ if __name__ == '__main__':
 
     quanx_script_2_sgmodule(quanx_script_urls)
 
-    gen_nftables_cnip("https://ispip.clang.cn/all_cn.txt", "cn4")
-    gen_nftables_cnip("https://ispip.clang.cn/hk.txt", "hk4")
+    # gen_nftables_cnip("https://ispip.clang.cn/all_cn.txt", "cn4")
+    # gen_nftables_cnip("https://ispip.clang.cn/hk.txt", "hk4")
+
+    gen_nftables_cnip("https://metowolf.github.io/iplist/data/special/china.txt", "cn4")
+    gen_nftables_cnip("https://metowolf.github.io/iplist/data/cncity/310000.txt", "310000")
+    gen_nftables_cnip("https://metowolf.github.io/iplist/data/cncity/320000.txt", "320000")
