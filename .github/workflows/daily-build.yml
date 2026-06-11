@@ -50,6 +50,7 @@ jobs:
       - name: Download extra rules
         env:
           EXTRA_RULE_URLS: |
+            https://limbopro.com/Adblock4limbo.list
             https://raw.githubusercontent.com/nexitallyy/ProxyRules/main/ApplePush.list
             https://raw.githubusercontent.com/nexitallyy/ProxyRules/main/Extra_AI.list
             https://raw.githubusercontent.com/nexitallyy/ProxyRules/main/Extra_CN_3.list
