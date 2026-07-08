@@ -73,6 +73,12 @@ for domain in "${DOMAINS[@]}"; do
   done < <(resolve_domain "$domain")
 done
 
+if [[ ! -s "$TMP_NETS" ]]; then
+  echo "没有新增网段，跳过写入 $OUTPUT_FILE 和刷新 nftables。"
+  echo "处理完成，临时文件已删除。"
+  exit 0
+fi
+
 cat "$TMP_EXISTING" "$TMP_NETS" | sort -u > "$TMP_ALL"
 
 {
