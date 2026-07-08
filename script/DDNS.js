@@ -3,7 +3,7 @@
 //
 // 支持阿里云 (aliyun) 与 DNSPod (dnspod)。
 // 网络变化时及每 5 分钟检测公网 IP 与 DNS 记录，不一致则自动更新；
-// 若 DNS 中不存在对应记录则自动创建。
+// 若 DNS 中不存在对应记录则自动创建；确认成功的 /24 网段会本地缓存 7 天。
 //
 // 参数 (逗号分隔的 key=value)：
 //   provider : aliyun 或 dnspod
@@ -11,27 +11,31 @@
 //   rr       : 主机记录/子域名，根域名填 @
 //   id       : 阿里云 AccessKeyId 或 DNSPod Token ID
 //   secret   : 阿里云 AccessKeySecret 或 DNSPod Token
+//   skip_ssid: 可选，指定 Wi-Fi SSID 下跳过执行，多个 SSID 用 | 分隔
 //
 // [Script]
-// DDNS 网络变化 = type=event,event-name=network-changed,argument="provider=aliyun,domain=example.com,rr=home,id=xxx,secret=yyy",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
-// DDNS 定时检测 = type=cron,cronexp="*/5 * * * *",argument="provider=aliyun,domain=example.com,rr=home,id=xxx,secret=yyy",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
+// DDNS 网络变化 = type=event,event-name=network-changed,argument="provider=aliyun,domain=example.com,rr=home,id=xxx,secret=yyy,skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
+// DDNS 定时检测 = type=cron,cronexp="*/5 * * * *",argument="provider=aliyun,domain=example.com,rr=home,id=xxx,secret=yyy,skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
 // =============================================================
 
 const SCRIPT_NAME = 'DDNS';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const cfg = parseArgs($argument || '');
 const fqdn = (cfg.rr && cfg.rr !== '@') ? `${cfg.rr}.${cfg.domain}` : cfg.domain;
 
-if (!cfg.provider || !cfg.domain || !cfg.id || !cfg.secret) {
+if (shouldSkipSSID(cfg.skip_ssid)) {
+    $done();
+} else if (!cfg.provider || !cfg.domain || !cfg.id || !cfg.secret) {
     notify('参数缺失', '', '请检查 provider/domain/id/secret 是否完整');
     $done();
+} else {
+    run().catch(err => {
+        console.log(`[${SCRIPT_NAME}] error: ${err && err.stack ? err.stack : err}`);
+        notify('DDNS 失败', fqdn, String(err && err.message ? err.message : err));
+        $done();
+    });
 }
-
-run().catch(err => {
-    console.log(`[${SCRIPT_NAME}] error: ${err && err.stack ? err.stack : err}`);
-    notify('DDNS 失败', fqdn, String(err && err.message ? err.message : err));
-    $done();
-});
 
 async function run() {
     const publicIP = await getPublicIP();
@@ -41,12 +45,26 @@ async function run() {
         throw new Error('未能获取有效的公网 IP 地址');
     }
 
+    const publicCIDR24 = ipToCIDR24(publicIP);
+    if (!publicCIDR24) {
+        throw new Error('未能转换公网 IP 为 /24 网段');
+    }
+
+    const cached = readIPCache(cfg);
+    const cachedCIDR24 = cached && (cached.cidr24 || ipToCIDR24(cached.ip));
+    if (cachedCIDR24 === publicCIDR24) {
+        console.log(`[${SCRIPT_NAME}] ${fqdn} /24 网段命中 7 天缓存 (${publicCIDR24})，跳过 DNS 查询与更新`);
+        $done();
+        return;
+    }
+
     const client = cfg.provider === 'dnspod' ? dnspod : aliyun;
     const record = await client.findRecord(cfg, fqdn);
 
     if (!record) {
         console.log(`[${SCRIPT_NAME}] 记录不存在，新建 ${fqdn} -> ${publicIP}`);
         await client.createRecord(cfg, publicIP);
+        writeIPCache(cfg, publicIP);
         notify('DDNS 已创建', fqdn, `新建 A 记录 -> ${publicIP}`);
         $done();
         return;
@@ -54,12 +72,14 @@ async function run() {
 
     if (record.value === publicIP) {
         console.log(`[${SCRIPT_NAME}] ${fqdn} IP 未变化 (${publicIP})，跳过更新`);
+        writeIPCache(cfg, publicIP);
         $done();
         return;
     }
 
     console.log(`[${SCRIPT_NAME}] 更新 ${fqdn}: ${record.value} -> ${publicIP}`);
     await client.updateRecord(cfg, record, publicIP);
+    writeIPCache(cfg, publicIP);
     notify('DDNS 已更新', fqdn, `${record.value} -> ${publicIP}`);
     $done();
 }
@@ -86,6 +106,80 @@ function notify(title, subtitle, body) {
     try {
         $notification.post(`${SCRIPT_NAME} - ${title}`, subtitle || '', body || '');
     } catch (e) { /* noop */ }
+}
+
+function shouldSkipSSID(value) {
+    const skipSSIDs = parseSSIDList(value);
+    if (!skipSSIDs.length) return false;
+
+    const ssid = getCurrentSSID();
+    if (!ssid) return false;
+
+    if (skipSSIDs.includes(ssid)) {
+        console.log(`[${SCRIPT_NAME}] 当前 Wi-Fi SSID 为 ${ssid}，命中 skip_ssid，跳过执行`);
+        return true;
+    }
+    return false;
+}
+
+function parseSSIDList(value) {
+    if (!value) return [];
+    return String(value).split('|').map(item => item.trim()).filter(Boolean);
+}
+
+function getCurrentSSID() {
+    try {
+        return $network && $network.wifi && $network.wifi.ssid ? String($network.wifi.ssid) : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function readIPCache(cfg) {
+    if (!hasPersistentStore()) return null;
+
+    try {
+        const raw = $persistentStore.read(getIPCacheKey(cfg));
+        if (!raw) return null;
+
+        const data = JSON.parse(raw);
+        if (!data || !data.updatedAt) return null;
+        if (!data.cidr24 && !data.ip) return null;
+        if (Date.now() - Number(data.updatedAt) > CACHE_TTL_MS) return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function writeIPCache(cfg, ip) {
+    if (!hasPersistentStore()) return;
+
+    try {
+        const cidr24 = ipToCIDR24(ip);
+        if (!cidr24) return;
+
+        const data = JSON.stringify({ ip, cidr24, updatedAt: Date.now() });
+        $persistentStore.write(data, getIPCacheKey(cfg));
+    } catch (e) { /* noop */ }
+}
+
+function getIPCacheKey(cfg) {
+    return `${SCRIPT_NAME}:last_ip:${cfg.provider}:${cfg.domain}:${cfg.rr || '@'}`;
+}
+
+function hasPersistentStore() {
+    return typeof $persistentStore !== 'undefined' &&
+        $persistentStore &&
+        typeof $persistentStore.read === 'function' &&
+        typeof $persistentStore.write === 'function';
+}
+
+function ipToCIDR24(ip) {
+    if (!isValidIP(ip)) return '';
+
+    const parts = String(ip).split('.');
+    return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
 }
 
 function isValidIP(ip) {

@@ -4,6 +4,7 @@
 
 set -euo pipefail
 
+NFTABLES_CONF="/etc/nftables.conf"
 OUTPUT_DIR="/etc/nftables"
 OUTPUT_FILE="${OUTPUT_DIR}/whitelist4.nft"
 
@@ -100,6 +101,6 @@ cat "$TMP_EXISTING" "$TMP_NETS" | sort -u > "$TMP_ALL"
 echo "已写入 $OUTPUT_FILE"
 
 echo "刷新 nftables 规则..."
-sudo nft -f "$OUTPUT_FILE"
+sudo nft -f "$NFTABLES_CONF"
 
 echo "处理完成，临时文件已删除。"
