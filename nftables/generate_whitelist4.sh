@@ -101,6 +101,10 @@ cat "$TMP_EXISTING" "$TMP_NETS" | sort -u > "$TMP_ALL"
 echo "已写入 $OUTPUT_FILE"
 
 echo "刷新 nftables 规则..."
-sudo nft -f "$NFTABLES_CONF"
+if [[ "$(id -u)" -eq 0 ]]; then
+  nft -f "$NFTABLES_CONF"
+else
+  sudo nft -f "$NFTABLES_CONF"
+fi
 
 echo "处理完成，临时文件已删除。"
