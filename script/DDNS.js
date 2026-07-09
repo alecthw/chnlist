@@ -104,9 +104,7 @@ async function getStatus() {
         title: `${fqdn} ${status}`,
         content: formatPanelContent([
             ['当前 IP', publicIP],
-            ['当前 /24', publicCIDR24 || '-'],
             ['DNS A', dnsIP || '未找到'],
-            ['DNS /24', dnsCIDR24 || '-'],
             ['缓存 /24', cachedCIDR24 || '-'],
             ['缓存时间', cached && cached.updatedAt ? formatDate(cached.updatedAt) : '-'],
             ['状态', status],
@@ -139,7 +137,6 @@ async function runUpdate(options) {
             title: `${fqdn} 缓存命中`,
             content: formatPanelContent([
                 ['当前 IP', publicIP],
-                ['当前 /24', publicCIDR24],
                 ['缓存 /24', cachedCIDR24],
                 ['缓存时间', cached && cached.updatedAt ? formatDate(cached.updatedAt) : '-'],
                 ['动作', '跳过 DNS 查询与更新']
@@ -160,7 +157,6 @@ async function runUpdate(options) {
             title: `${fqdn} 已创建`,
             content: formatPanelContent([
                 ['当前 IP', publicIP],
-                ['当前 /24', publicCIDR24],
                 ['DNS A', publicIP],
                 ['动作', '新建 A 记录']
             ]),
@@ -175,9 +171,7 @@ async function runUpdate(options) {
             title: `${fqdn} 无变化`,
             content: formatPanelContent([
                 ['当前 IP', publicIP],
-                ['当前 /24', publicCIDR24],
                 ['DNS A', record.value],
-                ['DNS /24', ipToCIDR24(record.value) || '-'],
                 ['动作', force ? '手动检查，无需更新' : '无需更新']
             ]),
             style: 'good'
@@ -192,7 +186,6 @@ async function runUpdate(options) {
         title: `${fqdn} 已更新`,
         content: formatPanelContent([
             ['当前 IP', publicIP],
-            ['当前 /24', publicCIDR24],
             ['原 DNS A', record.value],
             ['新 DNS A', publicIP],
             ['动作', force ? '手动更新' : '自动更新']
