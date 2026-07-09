@@ -13,6 +13,11 @@
 
 - `po0-example.nft`：nftables 主配置模板，包含 NAT 转发、入站/转发/出站过滤规则。
 - `generate_whitelist4.sh`：解析指定 DDNS 域名的 A 记录，生成 `/etc/nftables/whitelist4.nft`，并刷新 nftables。
+- `surge/`：Surge 模块和共享 DDNS 脚本。
+- `loon/`：Loon 插件，复用 `DDNS.js`。
+- `stash/`：Stash 覆写配置，复用 `DDNS.js`。
+- `egern/`：Egern 模块配置，复用 `DDNS.js`。
+- `quanx/`：Quantumult X 配置片段，复用 `DDNS.js` 的兼容层。
 - `cn4.nft`：中国大陆 IPv4 地址集合，需要从 release 地址下载到服务器。
 - `whitelist4.nft`：脚本生成的白名单 IPv4 集合，不需要手动维护。
 
@@ -74,7 +79,7 @@ define DEST_PORT_1 = 30001
 确认无误后覆盖系统配置：
 
 ```bash
-cp nftables/po0-example.nft /etc/nftables.conf
+cp ddns-nft/po0-example.nft /etc/nftables.conf
 ```
 
 ## 配置 DDNS 白名单
@@ -117,7 +122,7 @@ EOF
 然后执行脚本：
 
 ```bash
-bash nftables/generate_whitelist4.sh
+bash ddns-nft/generate_whitelist4.sh
 ```
 
 root 执行时脚本会直接调用 `nft`；非 root 执行时会通过 `sudo nft` 刷新规则。

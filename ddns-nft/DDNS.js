@@ -15,14 +15,16 @@
 //   mode     : 可选，panel 表示输出 Surge 面板内容
 //
 // [Script]
-// DDNS 网络变化 = type=event,event-name=network-changed,argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
-// DDNS 定时检测 = type=cron,cronexp="*/30 * * * *",argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
-// DDNS 面板 = type=generic,argument="mode=panel&provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
+// DDNS 网络变化 = type=event,event-name=network-changed,argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+// DDNS 定时检测 = type=cron,cronexp="*/30 * * * *",argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+// DDNS 面板 = type=generic,argument="mode=panel&provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
 // =============================================================
 
 const SCRIPT_NAME = 'DDNS';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 20;
+
+initRuntimeCompat();
 
 const cfg = parseArgs(getArgument());
 if (cfg.provider) cfg.provider = cfg.provider.toLowerCase();
@@ -81,7 +83,7 @@ async function runPanel() {
         return;
     }
 
-    const manual = getScriptTrigger() === 'button';
+    const manual = getScriptTrigger() === 'button' || isQuanXRuntime();
     const result = manual
         ? await runUpdate({ manual: true, notify: false })
         : await getStatus();
@@ -196,6 +198,77 @@ async function runUpdate(options) {
 }
 
 // ============================================================
+// 运行时兼容
+// ============================================================
+
+function initRuntimeCompat() {
+    const root = getGlobalRoot();
+
+    if (typeof $httpClient === 'undefined' && typeof $task !== 'undefined') {
+        root.$httpClient = {
+            get(options, callback) {
+                fetchWithTask('GET', options, callback);
+            },
+            post(options, callback) {
+                fetchWithTask('POST', options, callback);
+            }
+        };
+    }
+
+    if (typeof $persistentStore === 'undefined' && typeof $prefs !== 'undefined') {
+        root.$persistentStore = {
+            read(key) {
+                return $prefs.valueForKey(key);
+            },
+            write(value, key) {
+                return $prefs.setValueForKey(value, key);
+            }
+        };
+    }
+
+    if (typeof $notification === 'undefined' && typeof $notify !== 'undefined') {
+        root.$notification = {
+            post(title, subtitle, body) {
+                $notify(title || '', subtitle || '', body || '');
+            }
+        };
+    }
+
+    if (typeof $network === 'undefined') {
+        const ssid = getRuntimeSSID();
+        if (ssid) root.$network = { wifi: { ssid } };
+    }
+}
+
+function getGlobalRoot() {
+    if (typeof globalThis !== 'undefined') return globalThis;
+    return Function('return this')();
+}
+
+function fetchWithTask(method, options, callback) {
+    const request = {
+        url: options.url,
+        method,
+        headers: options.headers || {},
+        body: options.body,
+        timeout: options.timeout
+    };
+
+    $task.fetch(request).then(response => {
+        callback(null, {
+            status: response.statusCode || response.status || 0,
+            headers: response.headers || {}
+        }, response.body || '');
+    }, error => {
+        callback(error);
+    });
+}
+
+function isQuanXRuntime() {
+    return typeof $task !== 'undefined' && typeof $prefs !== 'undefined';
+}
+
+// ============================================================
 // 参数解析
 // ============================================================
 
@@ -262,6 +335,12 @@ function notify(title, subtitle, body) {
 }
 
 function finishPanel(title, content, style) {
+    if (isQuanXRuntime()) {
+        notify(title, '', content);
+        $done();
+        return;
+    }
+
     $done({
         title,
         content,
@@ -331,10 +410,23 @@ function parseSSIDList(value) {
 
 function getCurrentSSID() {
     try {
-        return $network && $network.wifi && $network.wifi.ssid ? String($network.wifi.ssid) : '';
+        return getRuntimeSSID();
     } catch (e) {
         return '';
     }
+}
+
+function getRuntimeSSID() {
+    if (typeof $network !== 'undefined' && $network && $network.wifi && $network.wifi.ssid) {
+        return String($network.wifi.ssid);
+    }
+
+    if (typeof $environment !== 'undefined' && $environment) {
+        if ($environment.ssid) return String($environment.ssid);
+        if ($environment.wifi && $environment.wifi.ssid) return String($environment.wifi.ssid);
+    }
+
+    return '';
 }
 
 function readIPCache(cfg) {

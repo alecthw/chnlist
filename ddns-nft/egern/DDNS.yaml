@@ -1,0 +1,34 @@
+name: DDNS 动态域名解析
+description: 支持阿里云 (aliyun) 和 DNSPod (dnspod)。网络变化时与每 30 分钟检测公网 IPv4 与 DNS A 记录，不一致时先匹配 /24 缓存，未命中才更新。
+
+# Egern 脚本使用同一份 DDNS.js。导入后请替换 argument 中的示例参数。
+# skip_ssid 多个 SSID 用竖线分隔，例如 Home|Office。
+
+scriptings:
+  - event:
+      name: DDNS 网络变化
+      event_name: network-changed
+      argument: "provider=aliyun&domain=example.com&rr=mobile&id=AccessKeyID/TokenID&secret=AccessKeySecret/TokenKey&skip_ssid=Home|Office"
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+      timeout: 30
+
+  - schedule:
+      name: DDNS 定时检测
+      cron: "*/30 * * * *"
+      argument: "provider=aliyun&domain=example.com&rr=mobile&id=AccessKeyID/TokenID&secret=AccessKeySecret/TokenKey&skip_ssid=Home|Office"
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+      timeout: 30
+
+  - manual:
+      name: DDNS 手动检查
+      argument: "mode=manual&provider=aliyun&domain=example.com&rr=mobile&id=AccessKeyID/TokenID&secret=AccessKeySecret/TokenKey&skip_ssid=Home|Office"
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+      timeout: 30
+
+panels:
+  - name: DDNS 状态
+    title: DDNS
+    content: 等待刷新
+    script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js
+    argument: "mode=panel&provider=aliyun&domain=example.com&rr=mobile&id=AccessKeyID/TokenID&secret=AccessKeySecret/TokenKey&skip_ssid=Home|Office"
+    update_interval: 300
