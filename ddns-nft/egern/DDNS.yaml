@@ -85,4 +85,3 @@ scriptings:
 
 widgets:
   - name: DDNS 状态
-    script_name: DDNS 状态

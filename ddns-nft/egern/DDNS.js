@@ -1,13 +1,14 @@
 const COMMON_DDNS_URL = 'https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js';
 
 export default async function(ctx) {
-    const argument = buildArgument(ctx.env || {});
+    const argument = buildArgument(ctx);
+    log(ctx, `[DDNS] Egern wrapper start: ${argument || 'no arguments'}`);
     try {
         const result = await runCommonDDNS(ctx, argument);
         if (isWidgetMode(argument)) return renderWidget(result);
     } catch (e) {
         const message = getErrorMessage(e);
-        console.log(`[DDNS] egern wrapper error: ${message}`);
+        log(ctx, `[DDNS] egern wrapper error: ${message}`);
         if (isWidgetMode(argument)) return renderWidget({
             title: 'DDNS 失败',
             content: message,
@@ -19,9 +20,10 @@ export default async function(ctx) {
     }
 }
 
-function buildArgument(env) {
+function buildArgument(ctx) {
+    const env = ctx.env || {};
     const pairs = [
-        ['mode', env.mode || ''],
+        ['mode', env.mode || (ctx.widgetFamily ? 'panel' : '')],
         ['provider', env.provider || 'aliyun'],
         ['domain', env.domain || ''],
         ['rr', env.rr || ''],
@@ -43,11 +45,13 @@ async function runCommonDDNS(ctx, argument) {
         httpClient: root.$httpClient,
         persistentStore: root.$persistentStore,
         notification: root.$notification,
-        done: root.$done
+        done: root.$done,
+        console: root.console
     };
 
     return new Promise(async (resolve, reject) => {
         root.$argument = argument;
+        root.console = makeConsole(ctx, previous.console);
         root.$network = { wifi: { ssid: ctx.device && ctx.device.wifi ? ctx.device.wifi.ssid : '' } };
         root.$httpClient = makeHttpClient(ctx);
         root.$persistentStore = {
@@ -157,6 +161,44 @@ function restoreGlobals(root, previous) {
     setOrDelete(root, '$persistentStore', previous.persistentStore);
     setOrDelete(root, '$notification', previous.notification);
     setOrDelete(root, '$done', previous.done);
+    setOrDelete(root, 'console', previous.console);
+}
+
+function makeConsole(ctx, previousConsole) {
+    const result = {};
+    ['log', 'info', 'warn', 'error'].forEach(level => {
+        result[level] = (...args) => writeLog(ctx, previousConsole, level, args);
+    });
+    return result;
+}
+
+function writeLog(ctx, previousConsole, level, args) {
+    const message = args.map(formatLogArg).join(' ');
+
+    try {
+        if (ctx && typeof ctx.log === 'function') ctx.log(message);
+    } catch (_) { /* noop */ }
+
+    try {
+        if (previousConsole && typeof previousConsole[level] === 'function') {
+            previousConsole[level].apply(previousConsole, args);
+        } else if (previousConsole && typeof previousConsole.log === 'function') {
+            previousConsole.log.apply(previousConsole, args);
+        }
+    } catch (_) { /* noop */ }
+}
+
+function formatLogArg(value) {
+    if (typeof value === 'string') return value;
+    try {
+        return JSON.stringify(value);
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function log(ctx, message) {
+    writeLog(ctx, typeof console !== 'undefined' ? console : null, 'log', [message]);
 }
 
 function setOrDelete(root, key, value) {
@@ -185,7 +227,7 @@ function renderWidget(result) {
         gap: 8,
         children: [
             { type: 'text', text: title, font: { size: 'headline', weight: 'semibold' }, textColor: '#FFFFFF' },
-            { type: 'text', text: content, font: { size: 'caption' }, textColor: '#FFFFFF', opacity: 0.92 }
+            { type: 'text', text: content, font: { size: 'caption2' }, textColor: '#FFFFFFCC' }
         ]
     };
 }
