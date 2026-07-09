@@ -93,7 +93,7 @@ async function request(ctx, method, options, callback) {
             timeout: normalizeTimeout(options.timeout)
         };
         if (typeof options.body !== 'undefined' && method !== 'GET') requestOptions.body = options.body;
-        if (options.policy) requestOptions.policy = options.policy;
+        if (options.policy && options.policy !== 'DIRECT') requestOptions.policy = options.policy;
 
         const response = await ctx.http[method.toLowerCase()](options.url, requestOptions);
         callback(null, { status: response.status, headers: response.headers }, await response.text());
@@ -105,10 +105,21 @@ async function request(ctx, method, options, callback) {
 function normalizeHeaders(headers) {
     const result = {};
     Object.keys(headers || {}).forEach(key => {
-        if (/^user-agent$/i.test(key)) return;
+        if (/^user-agent$/i.test(key)) {
+            result[key] = normalizeUserAgent(headers[key]);
+            return;
+        }
         result[key] = headers[key];
     });
     return result;
+}
+
+function normalizeUserAgent(value) {
+    const ua = String(value || '');
+    if (/curl/i.test(ua)) {
+        return 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+    }
+    return ua || 'Mozilla/5.0';
 }
 
 function normalizeTimeout(value) {
