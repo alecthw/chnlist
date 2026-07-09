@@ -3,7 +3,6 @@ const COMMON_DDNS_CACHE_KEY = 'DDNS:egern:common_script';
 
 export default async function(ctx) {
     const argument = buildArgument(ctx);
-    log(ctx, `[DDNS] Egern wrapper start: ${argument || 'no arguments'}`);
     try {
         const result = await runCommonDDNS(ctx, argument);
         if (isWidgetMode(argument)) return renderWidget(result);
@@ -78,6 +77,7 @@ function writeStorage(ctx, key, value) {
 }
 
 async function runCommonDDNS(ctx, argument) {
+    const code = await loadCommonDDNSCode(ctx);
     const root = globalThis;
     const previous = {
         argument: root.$argument,
@@ -89,7 +89,7 @@ async function runCommonDDNS(ctx, argument) {
         console: root.console
     };
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
         root.$argument = argument;
         root.console = makeConsole(ctx, previous.console);
         root.$network = { wifi: { ssid: ctx.device && ctx.device.wifi ? ctx.device.wifi.ssid : '' } };
@@ -109,7 +109,6 @@ async function runCommonDDNS(ctx, argument) {
         };
 
         try {
-            const code = await loadCommonDDNSCode(ctx);
             eval(code);
         } catch (e) {
             restoreGlobals(root, previous);
