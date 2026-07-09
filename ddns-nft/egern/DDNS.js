@@ -141,6 +141,10 @@ async function request(ctx, method, options, callback) {
 }
 
 function buildRequestOptions(method, options) {
+    if (method === 'GET' && isPublicIPLookup(options.url)) {
+        return buildPublicIPRequestOptions(options);
+    }
+
     const requestOptions = {
         timeout: normalizeTimeout(options.timeout),
         redirect: 'follow',
@@ -155,12 +159,25 @@ function buildRequestOptions(method, options) {
     return requestOptions;
 }
 
+function buildPublicIPRequestOptions(options) {
+    const requestOptions = {
+        timeout: normalizeTimeout(options.timeout)
+    };
+    const headers = normalizeHeaders(options.headers);
+    if (Object.keys(headers).length) requestOptions.headers = headers;
+    return requestOptions;
+}
+
 function normalizeHeaders(headers) {
     const result = {};
     Object.keys(headers || {}).forEach(key => {
         result[key] = headers[key];
     });
     return result;
+}
+
+function isPublicIPLookup(url) {
+    return /^https?:\/\/(myip\.ipip\.net|checkip\.dyndns\.com)(?:[/:]|$)/i.test(String(url || ''));
 }
 
 function headersToObject(headers) {
