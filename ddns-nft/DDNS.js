@@ -53,6 +53,12 @@ function start() {
             console.log(`[${SCRIPT_NAME}] panel error: ${formatError(err)}`);
             finishPanel('DDNS 失败', getErrorMessage(err), 'error');
         });
+    } else if (mode === 'manual') {
+        runManualUpdate().catch(err => {
+            console.log(`[${SCRIPT_NAME}] manual error: ${formatError(err)}`);
+            notify('DDNS 失败', fqdn, getErrorMessage(err));
+            $done();
+        });
     } else {
         runScheduledUpdate().catch(err => {
             console.log(`[${SCRIPT_NAME}] error: ${formatError(err)}`);
@@ -60,6 +66,16 @@ function start() {
             $done();
         });
     }
+}
+
+async function runManualUpdate() {
+    if (await shouldSkipSSID(cfg.skip_ssid)) {
+        $done();
+        return;
+    }
+
+    await runUpdate({ manual: true, notify: true });
+    $done();
 }
 
 async function runScheduledUpdate() {
