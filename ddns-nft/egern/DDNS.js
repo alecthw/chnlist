@@ -132,12 +132,19 @@ function makeHttpClient(ctx) {
 async function request(ctx, method, options, callback) {
     try {
         options = options || {};
+        options.url = normalizeRequestURL(options.url);
         const requestOptions = buildRequestOptions(method, options);
         const response = await ctx.http[method.toLowerCase()](options.url, requestOptions);
         callback(null, { status: response.status, headers: headersToObject(response.headers) }, await response.text());
     } catch (e) {
         callback(e);
     }
+}
+
+function normalizeRequestURL(url) {
+    return String(url || '').replace(/^(https?:\/\/[^/?#]+)([?#].*)?$/i, (match, origin, suffix) => {
+        return suffix ? `${origin}/${suffix}` : `${origin}/`;
+    });
 }
 
 function buildRequestOptions(method, options) {
