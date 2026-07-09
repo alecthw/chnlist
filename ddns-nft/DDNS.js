@@ -560,7 +560,7 @@ function isValidIP(ip) {
 const PUBLIC_IPV4_SOURCES = [
     {
         name: 'ipip',
-        url: 'https://myip.ipip.net',
+        url: 'http://myip.ipip.net',
         headers: { Accept: 'text/plain', 'User-Agent': 'curl/8.0' }
     },
     {
