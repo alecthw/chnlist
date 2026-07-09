@@ -1,4 +1,5 @@
 const COMMON_DDNS_URL = 'https://raw.githubusercontent.com/alecthw/chnlist/main/ddns-nft/DDNS.js';
+const COMMON_DDNS_CACHE_KEY = 'DDNS:egern:common_script';
 
 export default async function(ctx) {
     const argument = buildArgument(ctx);
@@ -37,6 +38,45 @@ function buildArgument(ctx) {
         .join('&');
 }
 
+async function loadCommonDDNSCode(ctx) {
+    try {
+        const response = await ctx.http.get(COMMON_DDNS_URL, {
+            timeout: 10000,
+            redirect: 'follow',
+            credentials: 'omit'
+        });
+        const code = await response.text();
+        if (!isUsableCommonCode(code)) throw new Error('通用 DDNS 脚本内容无效');
+        writeStorage(ctx, COMMON_DDNS_CACHE_KEY, code);
+        return code;
+    } catch (e) {
+        const cached = readStorage(ctx, COMMON_DDNS_CACHE_KEY);
+        if (isUsableCommonCode(cached)) {
+            log(ctx, `[DDNS] 加载通用脚本失败，使用 Egern 本地缓存: ${getErrorMessage(e)}`);
+            return cached;
+        }
+        throw e;
+    }
+}
+
+function isUsableCommonCode(code) {
+    return typeof code === 'string' && /function\s+start\s*\(/.test(code) && /start\s*\(\s*\)\s*;?/.test(code);
+}
+
+function readStorage(ctx, key) {
+    try {
+        return ctx.storage.get(key);
+    } catch (_) {
+        return null;
+    }
+}
+
+function writeStorage(ctx, key, value) {
+    try {
+        ctx.storage.set(key, value);
+    } catch (_) { /* noop */ }
+}
+
 async function runCommonDDNS(ctx, argument) {
     const root = globalThis;
     const previous = {
@@ -69,8 +109,7 @@ async function runCommonDDNS(ctx, argument) {
         };
 
         try {
-            const response = await ctx.http.get(COMMON_DDNS_URL, { timeout: 10000, policy: 'DIRECT' });
-            const code = await response.text();
+            const code = await loadCommonDDNSCode(ctx);
             eval(code);
         } catch (e) {
             restoreGlobals(root, previous);
