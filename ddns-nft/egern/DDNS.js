@@ -161,7 +161,8 @@ function buildRequestOptions(method, options) {
 
 function buildPublicIPRequestOptions(options) {
     const requestOptions = {
-        timeout: normalizeTimeout(options.timeout)
+        timeout: normalizeTimeout(options.timeout),
+        credentials: 'omit'
     };
     const headers = normalizeHeaders(options.headers);
     if (Object.keys(headers).length) requestOptions.headers = headers;
