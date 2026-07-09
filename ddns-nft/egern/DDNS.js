@@ -2,8 +2,21 @@ const COMMON_DDNS_URL = 'https://raw.githubusercontent.com/alecthw/chnlist/main/
 
 export default async function(ctx) {
     const argument = buildArgument(ctx.env || {});
-    const result = await runCommonDDNS(ctx, argument);
-    if (isWidgetMode(argument)) return renderWidget(result);
+    try {
+        const result = await runCommonDDNS(ctx, argument);
+        if (isWidgetMode(argument)) return renderWidget(result);
+    } catch (e) {
+        const message = getErrorMessage(e);
+        console.log(`[DDNS] egern wrapper error: ${message}`);
+        if (isWidgetMode(argument)) return renderWidget({
+            title: 'DDNS 失败',
+            content: message,
+            style: 'error'
+        });
+        try {
+            ctx.notify({ title: 'DDNS - 失败', body: message });
+        } catch (_) { /* noop */ }
+    }
 }
 
 function buildArgument(env) {
@@ -75,16 +88,32 @@ function makeHttpClient(ctx) {
 
 async function request(ctx, method, options, callback) {
     try {
-        const response = await ctx.http[method.toLowerCase()](options.url, {
-            headers: options.headers || {},
-            body: options.body,
-            timeout: (options.timeout || 10) * 1000,
-            policy: options.policy || 'DIRECT'
-        });
+        const requestOptions = {
+            headers: normalizeHeaders(options.headers),
+            timeout: normalizeTimeout(options.timeout)
+        };
+        if (typeof options.body !== 'undefined' && method !== 'GET') requestOptions.body = options.body;
+        if (options.policy) requestOptions.policy = options.policy;
+
+        const response = await ctx.http[method.toLowerCase()](options.url, requestOptions);
         callback(null, { status: response.status, headers: response.headers }, await response.text());
     } catch (e) {
         callback(e);
     }
+}
+
+function normalizeHeaders(headers) {
+    const result = {};
+    Object.keys(headers || {}).forEach(key => {
+        if (/^user-agent$/i.test(key)) return;
+        result[key] = headers[key];
+    });
+    return result;
+}
+
+function normalizeTimeout(value) {
+    const n = Number(value || 10);
+    return n > 0 && n < 1000 ? n * 1000 : n;
 }
 
 function restoreGlobals(root, previous) {
@@ -103,6 +132,10 @@ function setOrDelete(root, key, value) {
 
 function isWidgetMode(argument) {
     return /(?:^|&)mode=panel(?:&|$)/.test(argument);
+}
+
+function getErrorMessage(err) {
+    return String(err && err.message ? err.message : err);
 }
 
 function renderWidget(result) {

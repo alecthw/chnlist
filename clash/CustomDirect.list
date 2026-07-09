@@ -101,6 +101,8 @@ DOMAIN-SUFFIX,openclaudecode.cn
 
 # Custom
 DOMAIN-SUFFIX,ipip.net
+DOMAIN,checkip.dyndns.com
+DOMAIN,checkipv6.dyndns.com
 DOMAIN-SUFFIX,163.com
 DOMAIN-SUFFIX,cn.bing.com
 DOMAIN-SUFFIX,bing.cn
