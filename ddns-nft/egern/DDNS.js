@@ -109,9 +109,7 @@ function buildRequestOptions(method, options) {
     };
 
     const headers = normalizeHeaders(options.headers);
-    if (method !== 'GET' || !isPublicIPLookup(options.url)) {
-        if (Object.keys(headers).length) requestOptions.headers = headers;
-    }
+    if (Object.keys(headers).length) requestOptions.headers = headers;
 
     if (typeof options.body !== 'undefined' && method !== 'GET') requestOptions.body = options.body;
     if (options.policy) requestOptions.policy = options.policy;
@@ -121,14 +119,9 @@ function buildRequestOptions(method, options) {
 function normalizeHeaders(headers) {
     const result = {};
     Object.keys(headers || {}).forEach(key => {
-        if (/^user-agent$/i.test(key)) return;
         result[key] = headers[key];
     });
     return result;
-}
-
-function isPublicIPLookup(url) {
-    return /^https?:\/\/(myip\.ipip\.net|checkip\.dyndns\.com)(?:[/:]|$)/i.test(String(url || ''));
 }
 
 function headersToObject(headers) {
