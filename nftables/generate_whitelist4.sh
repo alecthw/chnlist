@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+export PATH
+
 NFTABLES_CONF="/etc/nftables.conf"
 OUTPUT_DIR="/etc/nftables"
 OUTPUT_FILE="${OUTPUT_DIR}/whitelist4.nft"
@@ -48,6 +51,19 @@ resolve_domain() {
   fi
 }
 
+find_nft() {
+  if command -v nft >/dev/null 2>&1; then
+    command -v nft
+  elif [[ -x /usr/sbin/nft ]]; then
+    echo /usr/sbin/nft
+  elif [[ -x /sbin/nft ]]; then
+    echo /sbin/nft
+  else
+    echo "错误: 未找到 nft 命令，请确认已安装 nftables。" >&2
+    return 1
+  fi
+}
+
 echo "检查输出目录..."
 mkdir -p "$OUTPUT_DIR"
 
@@ -79,6 +95,12 @@ if [[ ! -s "$TMP_NETS" ]]; then
   exit 0
 fi
 
+NFT_BIN="$(find_nft)"
+if [[ "$(id -u)" -ne 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+  echo "错误: 非 root 执行时需要 sudo。" >&2
+  exit 1
+fi
+
 cat "$TMP_EXISTING" "$TMP_NETS" | sort -u > "$TMP_ALL"
 
 {
@@ -108,9 +130,9 @@ echo "已写入 $OUTPUT_FILE"
 
 echo "刷新 nftables 规则..."
 if [[ "$(id -u)" -eq 0 ]]; then
-  nft -f "$NFTABLES_CONF"
+  "$NFT_BIN" -f "$NFTABLES_CONF"
 else
-  sudo nft -f "$NFTABLES_CONF"
+  sudo "$NFT_BIN" -f "$NFTABLES_CONF"
 fi
 
 echo "处理完成，临时文件已删除。"

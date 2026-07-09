@@ -146,10 +146,10 @@ nft list set ip filter cn4
 
 ## 定时更新白名单
 
-建议定时执行 `generate_whitelist4.sh`，让 DDNS 地址变化后自动进入白名单：
+建议定时执行 `generate_whitelist4.sh`，让 DDNS 地址变化后自动进入白名单。DDNS 模块已经监听网络变化并会主动更新解析记录，定时检测主要用于兜底，无需高频触发：
 
 ```cron
-*/5 * * * * /bin/bash /path/to/generate_whitelist4.sh >> /var/log/generate_whitelist4.log 2>&1
+*/30 * * * * /bin/bash /path/to/generate_whitelist4.sh >> /var/log/generate_whitelist4.log 2>&1
 ```
 
 脚本会保留已有白名单网段，并追加新解析到的 `/24`。如果没有新增网段，本次执行不会改写 `/etc/nftables/whitelist4.nft`，也不会刷新 nftables；旧网段不会自动删除。
