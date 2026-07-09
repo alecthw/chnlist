@@ -88,38 +88,61 @@ function makeHttpClient(ctx) {
 
 async function request(ctx, method, options, callback) {
     try {
-        const requestOptions = {
-            headers: normalizeHeaders(options.headers),
-            timeout: normalizeTimeout(options.timeout)
-        };
-        if (typeof options.body !== 'undefined' && method !== 'GET') requestOptions.body = options.body;
-        if (options.policy && options.policy !== 'DIRECT') requestOptions.policy = options.policy;
-
+        options = options || {};
+        const requestOptions = buildRequestOptions(method, options);
         const response = await ctx.http[method.toLowerCase()](options.url, requestOptions);
-        callback(null, { status: response.status, headers: response.headers }, await response.text());
+        callback(null, { status: response.status, headers: headersToObject(response.headers) }, await response.text());
     } catch (e) {
         callback(e);
     }
 }
 
+function buildRequestOptions(method, options) {
+    const requestOptions = {
+        timeout: normalizeTimeout(options.timeout),
+        redirect: 'follow',
+        credentials: 'omit'
+    };
+
+    const headers = normalizeHeaders(options.headers);
+    if (method !== 'GET' || !isPublicIPLookup(options.url)) {
+        if (Object.keys(headers).length) requestOptions.headers = headers;
+    }
+
+    if (typeof options.body !== 'undefined' && method !== 'GET') requestOptions.body = options.body;
+    if (options.policy) requestOptions.policy = options.policy;
+    return requestOptions;
+}
+
 function normalizeHeaders(headers) {
     const result = {};
     Object.keys(headers || {}).forEach(key => {
-        if (/^user-agent$/i.test(key)) {
-            result[key] = normalizeUserAgent(headers[key]);
-            return;
-        }
+        if (/^user-agent$/i.test(key)) return;
         result[key] = headers[key];
     });
     return result;
 }
 
-function normalizeUserAgent(value) {
-    const ua = String(value || '');
-    if (/curl/i.test(ua)) {
-        return 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+function isPublicIPLookup(url) {
+    return /^https?:\/\/(myip\.ipip\.net|checkip\.dyndns\.com)(?:[/:]|$)/i.test(String(url || ''));
+}
+
+function headersToObject(headers) {
+    const result = {};
+    if (!headers) return result;
+
+    if (typeof headers.forEach === 'function') {
+        headers.forEach((value, key) => {
+            result[key] = value;
+        });
+        return result;
     }
-    return ua || 'Mozilla/5.0';
+
+    Object.keys(headers).forEach(key => {
+        const value = typeof headers.get === 'function' ? headers.get(key) : headers[key];
+        if (value !== null && typeof value !== 'undefined') result[key] = value;
+    });
+    return result;
 }
 
 function normalizeTimeout(value) {
