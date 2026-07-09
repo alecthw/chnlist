@@ -2,7 +2,7 @@
 // Surge DDNS 动态域名解析脚本
 //
 // 支持阿里云 (aliyun) 与 DNSPod (dnspod)。
-// 网络变化时及每 5 分钟检测公网 IP 与 DNS 记录，不一致则自动更新；
+// 网络变化时及每 30 分钟检测公网 IP 与 DNS 记录，不一致则自动更新；
 // 若 DNS 中不存在对应记录则自动创建；确认成功的 /24 网段会本地缓存 7 天。
 //
 // 参数 (& 分隔的 key=value，兼容旧逗号分隔)：
@@ -16,12 +16,13 @@
 //
 // [Script]
 // DDNS 网络变化 = type=event,event-name=network-changed,argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
-// DDNS 定时检测 = type=cron,cronexp="*/5 * * * *",argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
+// DDNS 定时检测 = type=cron,cronexp="*/30 * * * *",argument="provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
 // DDNS 面板 = type=generic,argument="mode=panel&provider=aliyun&domain=example.com&rr=home&id=xxx&secret=yyy&skip_ssid=Home|Office",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/script/DDNS.js
 // =============================================================
 
 const SCRIPT_NAME = 'DDNS';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 20;
 
 const cfg = parseArgs(getArgument());
 if (cfg.provider) cfg.provider = cfg.provider.toLowerCase();
@@ -65,7 +66,7 @@ async function runScheduledUpdate() {
         return;
     }
 
-    await runUpdate({ force: false, notify: true });
+    await runUpdate({ manual: false, notify: true });
     $done();
 }
 
@@ -82,7 +83,7 @@ async function runPanel() {
 
     const manual = getScriptTrigger() === 'button';
     const result = manual
-        ? await runUpdate({ force: true, notify: false })
+        ? await runUpdate({ manual: true, notify: false })
         : await getStatus();
     finishPanel(result.title, result.content, result.style);
 }
@@ -95,30 +96,30 @@ async function getStatus() {
     const dnsIP = record ? record.value : '';
     const dnsCIDR24 = dnsIP ? ipToCIDR24(dnsIP) : '';
     const cached = readIPCache(cfg);
-    const cachedCIDR24 = cached && (cached.cidr24 || ipToCIDR24(cached.ip));
+    const cachedCIDR24s = getCachedCIDR24s(cached);
     const matched = dnsIP === publicIP;
     const sameCIDR24 = Boolean(dnsCIDR24 && publicCIDR24 && dnsCIDR24 === publicCIDR24);
-    const status = matched ? '正常' : (sameCIDR24 ? '同网段' : '待更新');
+    const cacheHit = cachedCIDR24s.includes(publicCIDR24);
+    const status = matched ? '正常' : (sameCIDR24 ? '同网段' : (cacheHit ? '缓存命中' : '待更新'));
 
     return {
         title: `${fqdn} ${status}`,
         content: formatPanelContent([
-            ['当前 IP', publicIP],
+            ['公网 IP', publicIP],
             ['DNS A', dnsIP || '未找到'],
-            ['缓存 /24', cachedCIDR24 || '-'],
+            ['缓存 /24', formatCachedCIDR24s(cachedCIDR24s)],
             ['缓存时间', cached && cached.updatedAt ? formatDate(cached.updatedAt) : '-'],
             ['状态', status],
-            ['触发', '自动刷新，点刷新按钮手动更新']
+            ['触发', '自动刷新，点刷新按钮手动检查']
         ]),
-        style: (matched || sameCIDR24) ? 'good' : 'alert'
+        style: (matched || sameCIDR24 || cacheHit) ? 'good' : 'alert'
     };
 }
 
 async function runUpdate(options) {
-    const force = Boolean(options && options.force);
+    const manual = Boolean(options && options.manual);
     const shouldNotify = Boolean(options && options.notify);
     const publicIP = await getPublicIP();
-    console.log(`[${SCRIPT_NAME}] ${fqdn} 当前公网 IP: ${publicIP}`);
 
     if (!publicIP || !isValidIP(publicIP)) {
         throw new Error('未能获取有效的公网 IP 地址');
@@ -127,22 +128,6 @@ async function runUpdate(options) {
     const publicCIDR24 = ipToCIDR24(publicIP);
     if (!publicCIDR24) {
         throw new Error('未能转换公网 IP 为 /24 网段');
-    }
-
-    const cached = readIPCache(cfg);
-    const cachedCIDR24 = cached && (cached.cidr24 || ipToCIDR24(cached.ip));
-    if (!force && cachedCIDR24 === publicCIDR24) {
-        console.log(`[${SCRIPT_NAME}] ${fqdn} /24 网段命中 7 天缓存 (${publicCIDR24})，跳过 DNS 查询与更新`);
-        return {
-            title: `${fqdn} 缓存命中`,
-            content: formatPanelContent([
-                ['当前 IP', publicIP],
-                ['缓存 /24', cachedCIDR24],
-                ['缓存时间', cached && cached.updatedAt ? formatDate(cached.updatedAt) : '-'],
-                ['动作', '跳过 DNS 查询与更新']
-            ]),
-            style: 'good'
-        };
     }
 
     const client = getClient();
@@ -156,7 +141,7 @@ async function runUpdate(options) {
         return {
             title: `${fqdn} 已创建`,
             content: formatPanelContent([
-                ['当前 IP', publicIP],
+                ['公网 IP', publicIP],
                 ['DNS A', publicIP],
                 ['动作', '新建 A 记录']
             ]),
@@ -165,14 +150,30 @@ async function runUpdate(options) {
     }
 
     if (record.value === publicIP) {
-        console.log(`[${SCRIPT_NAME}] ${fqdn} IP 未变化 (${publicIP})，跳过更新`);
-        writeIPCache(cfg, publicIP);
+        console.log(`[${SCRIPT_NAME}] ${fqdn} DNS A 已是公网 IPv4 (${publicIP})，跳过更新`);
         return {
             title: `${fqdn} 无变化`,
             content: formatPanelContent([
-                ['当前 IP', publicIP],
+                ['公网 IP', publicIP],
                 ['DNS A', record.value],
-                ['动作', force ? '手动检查，无需更新' : '无需更新']
+                ['动作', manual ? '手动检查，无需更新' : '无需更新']
+            ]),
+            style: 'good'
+        };
+    }
+
+    const cached = readIPCache(cfg);
+    const cachedCIDR24s = getCachedCIDR24s(cached);
+    if (cachedCIDR24s.includes(publicCIDR24)) {
+        console.log(`[${SCRIPT_NAME}] ${fqdn} DNS A (${record.value}) 与公网 IPv4 (${publicIP}) 不一致，但 /24 网段命中 7 天缓存 (${publicCIDR24})，跳过更新`);
+        return {
+            title: `${fqdn} 缓存命中`,
+            content: formatPanelContent([
+                ['公网 IP', publicIP],
+                ['DNS A', record.value],
+                ['缓存 /24', formatCachedCIDR24s(cachedCIDR24s)],
+                ['缓存时间', cached && cached.updatedAt ? formatDate(cached.updatedAt) : '-'],
+                ['动作', '跳过 DNS 更新']
             ]),
             style: 'good'
         };
@@ -185,10 +186,10 @@ async function runUpdate(options) {
     return {
         title: `${fqdn} 已更新`,
         content: formatPanelContent([
-            ['当前 IP', publicIP],
+            ['公网 IP', publicIP],
             ['原 DNS A', record.value],
             ['新 DNS A', publicIP],
-            ['动作', force ? '手动更新' : '自动更新']
+            ['动作', manual ? '手动更新' : '自动更新']
         ]),
         style: 'good'
     };
@@ -342,12 +343,7 @@ function readIPCache(cfg) {
     try {
         const raw = $persistentStore.read(getIPCacheKey(cfg));
         if (!raw) return null;
-
-        const data = JSON.parse(raw);
-        if (!data || !data.updatedAt) return null;
-        if (!data.cidr24 && !data.ip) return null;
-        if (Date.now() - Number(data.updatedAt) > CACHE_TTL_MS) return null;
-        return data;
+        return normalizeIPCache(JSON.parse(raw));
     } catch (e) {
         return null;
     }
@@ -360,9 +356,62 @@ function writeIPCache(cfg, ip) {
         const cidr24 = ipToCIDR24(ip);
         if (!cidr24) return;
 
-        const data = JSON.stringify({ ip, cidr24, updatedAt: Date.now() });
-        $persistentStore.write(data, getIPCacheKey(cfg));
+        const cached = readIPCache(cfg);
+        const entries = cached && cached.entries ? cached.entries.slice() : [];
+        entries.push({ ip, cidr24, updatedAt: Date.now() });
+
+        const data = normalizeIPCache({ entries });
+        if (!data) return;
+        $persistentStore.write(JSON.stringify(data), getIPCacheKey(cfg));
     } catch (e) { /* noop */ }
+}
+
+function normalizeIPCache(data) {
+    if (!data || !Array.isArray(data.entries)) return null;
+
+    const now = Date.now();
+    const byCIDR24 = {};
+    data.entries.forEach(entry => addIPCacheEntry(byCIDR24, entry, now));
+
+    const entries = Object.keys(byCIDR24)
+        .map(cidr24 => byCIDR24[cidr24])
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, CACHE_MAX_ENTRIES);
+    if (!entries.length) return null;
+
+    return { entries, updatedAt: entries[0].updatedAt };
+}
+
+function addIPCacheEntry(byCIDR24, entry, now) {
+    const cidr24 = getCacheEntryCIDR24(entry);
+    if (!cidr24) return;
+
+    const updatedAt = Number(entry && entry.updatedAt);
+    if (!updatedAt || Number.isNaN(updatedAt)) return;
+    if (now - updatedAt > CACHE_TTL_MS) return;
+
+    const ip = entry && isValidIP(entry.ip) ? entry.ip : '';
+    const existing = byCIDR24[cidr24];
+    if (!existing || existing.updatedAt < updatedAt) {
+        byCIDR24[cidr24] = { ip, cidr24, updatedAt };
+    }
+}
+
+function getCacheEntryCIDR24(entry) {
+    if (!entry) return '';
+
+    const cidr24 = entry.cidr24 ? String(entry.cidr24) : ipToCIDR24(entry.ip);
+    return isValidCIDR24(cidr24) ? cidr24 : '';
+}
+
+function getCachedCIDR24s(cached) {
+    return cached && Array.isArray(cached.entries)
+        ? cached.entries.map(entry => entry.cidr24).filter(Boolean)
+        : [];
+}
+
+function formatCachedCIDR24s(cidr24s) {
+    return cidr24s && cidr24s.length ? cidr24s.join(', ') : '-';
 }
 
 function getIPCacheKey(cfg) {
@@ -381,6 +430,11 @@ function ipToCIDR24(ip) {
 
     const parts = String(ip).split('.');
     return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+}
+
+function isValidCIDR24(cidr24) {
+    if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.0\/24$/.test(cidr24)) return false;
+    return isValidIP(String(cidr24).replace('/24', ''));
 }
 
 function isValidIP(ip) {
