@@ -350,7 +350,7 @@ function isAlreadyPinnedResponse(data) {
 
 function createAlreadyPinnedResult(item, groupName) {
     const label = formatRequestLabel(groupName, item);
-    const previous = findPreviousRequestResult(label);
+    const previous = findPreviousRequestResult(item, label);
     const hasPreviousData = previous && (
         (previous.currentIp && previous.currentIp !== '-') ||
         (Array.isArray(previous.whitelist) && previous.whitelist.length > 0)
@@ -362,20 +362,51 @@ function createAlreadyPinnedResult(item, groupName) {
         success: true,
         statusText: '已存在',
         detail: hasPreviousData
-            ? '当前 IP 已存在于其他 slot，无需重复添加；IP 和白名单沿用上一次结果'
-            : '当前 IP 已存在于其他 slot，无需重复添加；API 未返回当前 IP 和白名单',
+            ? '当前 IP 已存在于其他 slot；IP 和白名单沿用上次结果'
+            : '当前 IP 已存在于其他 slot；未返回当前 IP 和白名单',
         error: '',
         currentIp: hasPreviousData && previous.currentIp ? previous.currentIp : '-',
         whitelist: hasPreviousData && Array.isArray(previous.whitelist) ? previous.whitelist : []
     };
 }
 
-function findPreviousRequestResult(label) {
+function findPreviousRequestResult(item, label) {
     const snapshot = readSnapshot();
     if (!snapshot || !Array.isArray(snapshot.results)) return null;
-    return snapshot.results.find(function (result) {
-        return result && result.label === label;
-    }) || null;
+
+    const usableResults = snapshot.results.filter(hasUsableRequestData);
+    const exact = usableResults.find(function (result) {
+        return result.label === label;
+    });
+    if (exact) return exact;
+
+    const equivalentLabels = getEquivalentRequestLabels(item.token);
+    const sameToken = usableResults.find(function (result) {
+        return equivalentLabels.includes(result.label);
+    });
+    return sameToken || usableResults[0] || null;
+}
+
+function getEquivalentRequestLabels(token) {
+    const labels = [];
+    [
+        { value: rawArgs.cellular_tokens, type: 'cellular', groupName: '蜂窝' },
+        { value: rawArgs.wifi_tokens, type: 'wifi', groupName: 'Wi-Fi' }
+    ].forEach(function (group) {
+        parseTokenList(group.value, group.type).forEach(function (item) {
+            if (item.valid && item.token === token) {
+                labels.push(formatRequestLabel(group.groupName, item));
+            }
+        });
+    });
+    return labels;
+}
+
+function hasUsableRequestData(result) {
+    return Boolean(result) && (
+        (result.currentIp && result.currentIp !== '-') ||
+        (Array.isArray(result.whitelist) && result.whitelist.length > 0)
+    );
 }
 
 function createRequestFailure(item, groupName, error) {
@@ -453,7 +484,7 @@ function createSnapshot(options) {
 
 function createSkippedSnapshot(network, trigger) {
     const previous = readSnapshot();
-    const note = `SSID ${network.ssid} 命中 skip_ssids，已跳过`;
+    const note = `命中 SKIP，已跳过`;
     const hasPreviousResults = previous && Array.isArray(previous.results) && previous.results.length > 0;
     if (!hasPreviousResults) {
         return createSnapshot({
@@ -470,7 +501,7 @@ function createSkippedSnapshot(network, trigger) {
     return Object.assign({}, previous, {
         network,
         trigger,
-        note: `${note}；请求结果沿用上一次`
+        note: `${note}；沿用上次结果`
     });
 }
 
