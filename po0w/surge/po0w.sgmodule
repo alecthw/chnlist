@@ -1,0 +1,16 @@
+#!name=PO0W 防火墙白名单
+#!desc=网络变化时自动更新当前网络对应的防火墙白名单，并每 30 分钟定时兜底；Panel 展示最近一轮 API 请求结果。
+#!category=po0w
+#!system=ios
+#!arguments=host:124.221.69.228,cellular_tokens:,wifi_tokens:,skip_ssids:
+#!arguments-desc=host: API 主机，填写 IP 地址或域名，默认 124.221.69.228\ncellular_tokens: 蜂窝网络使用的 token@slot_id，多个用竖线分隔\nwifi_tokens: Wi-Fi 使用的 token@slot_id，多个用竖线分隔\nskip_ssids: 不更新白名单的 Wi-Fi SSID，多个用竖线分隔
+
+[Script]
+PO0W 网络变化 = type=event,event-name=network-changed,argument="mode=update&trigger=event&host={{{host}}}&cellular_tokens={{{cellular_tokens}}}&wifi_tokens={{{wifi_tokens}}}&skip_ssids={{{skip_ssids}}}",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.js,timeout=30
+
+PO0W 定时更新 = type=cron,cronexp="*/30 * * * *",argument="mode=update&trigger=cron&host={{{host}}}&cellular_tokens={{{cellular_tokens}}}&wifi_tokens={{{wifi_tokens}}}&skip_ssids={{{skip_ssids}}}",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.js,timeout=30
+
+PO0W 面板 = type=generic,argument="mode=panel&host={{{host}}}&cellular_tokens={{{cellular_tokens}}}&wifi_tokens={{{wifi_tokens}}}&skip_ssids={{{skip_ssids}}}",script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.js,timeout=30
+
+[Panel]
+PO0W 白名单 = title="PO0W 防火墙白名单",content="等待网络变化或定时任务",style=info,script-name=PO0W 面板,update-interval=60
