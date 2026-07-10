@@ -1,9 +1,9 @@
 // =============================================================
-// Surge PO0W 防火墙白名单脚本
+// Surge PO0 防火墙白名单脚本
 //
 // - network-changed：按当前网络更新对应 token 组
 // - cron：每 30 分钟执行一次
-// - panel：只读取最近一轮结果，不会再次请求 API
+// - panel：点击刷新按钮手动更新；自动刷新只读取最近一轮结果
 // =============================================================
 
 const SCRIPT_NAME = 'PO0W';
@@ -46,7 +46,7 @@ async function runUpdate() {
         });
         writeSnapshot(snapshot);
         console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
-        return;
+        return snapshot;
     }
 
     const selected = network.type === 'wifi' ? cfg.wifiTokens : cfg.cellularTokens;
@@ -64,7 +64,7 @@ async function runUpdate() {
         });
         writeSnapshot(snapshot);
         console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
-        return;
+        return snapshot;
     }
 
     const tasks = selected.map(function (item) {
@@ -101,20 +101,28 @@ async function runUpdate() {
     });
     writeSnapshot(snapshot);
     console.log(`[${SCRIPT_NAME}] ${network.label}：${summary}，${snapshot.note}`);
+    return snapshot;
 }
 
-function runPanel() {
+async function runPanel() {
+    const isButton = getScriptTrigger() === 'button';
     try {
+        if (isButton) {
+            const snapshot = await runUpdate();
+            finishPanel(renderPanel(snapshot));
+            return;
+        }
+
         buildConfig(rawArgs);
         const snapshot = readSnapshot();
         if (!snapshot) {
             const network = getNetworkInfo();
             finishPanel({
-                title: 'PO0W 防火墙白名单',
+                title: 'PO0 防火墙白名单',
                 content: [
                     'API 请求结果: 暂无',
                     `当前网络环境: ${network.label}`,
-                    '等待网络变化或定时任务'
+                    '点击刷新按钮可手动更新'
                 ].join('\n'),
                 style: 'info'
             });
@@ -122,15 +130,9 @@ function runPanel() {
         }
         finishPanel(renderPanel(snapshot));
     } catch (error) {
-        finishPanel({
-            title: 'PO0W 防火墙白名单 · 失败',
-            content: [
-                'API 请求结果: 失败',
-                `当前网络环境: ${getNetworkInfo().label}`,
-                `参数错误: ${getErrorMessage(error)}`
-            ].join('\n'),
-            style: 'error'
-        });
+        const snapshot = createFailureSnapshot(error, isButton ? 'panel' : 'panel-auto');
+        if (isButton) writeSnapshot(snapshot);
+        finishPanel(renderPanel(snapshot));
     }
 }
 
@@ -180,8 +182,16 @@ function buildConfig(args) {
         cellularTokens,
         wifiTokens,
         skipSSIDs: parseList(args.skip_ssids),
-        trigger: args.trigger === 'cron' ? 'cron' : 'event'
+        trigger: args.trigger === 'cron' ? 'cron' : (args.trigger === 'panel' ? 'panel' : 'event')
     };
+}
+
+function getScriptTrigger() {
+    try {
+        return typeof $trigger !== 'undefined' ? String($trigger || '') : '';
+    } catch (error) {
+        return '';
+    }
 }
 
 function normalizeHost(value) {
@@ -392,13 +402,13 @@ function createSnapshot(options) {
     };
 }
 
-function createFailureSnapshot(error) {
+function createFailureSnapshot(error, trigger) {
     return createSnapshot({
         status: 'failure',
         summary: '失败',
         style: 'error',
         network: getNetworkInfo(),
-        trigger: rawArgs.trigger === 'cron' ? 'cron' : 'event',
+        trigger: trigger || (rawArgs.trigger === 'cron' ? 'cron' : (rawArgs.trigger === 'panel' ? 'panel' : 'event')),
         note: `参数或运行错误: ${getErrorMessage(error)}`,
         results: []
     });
@@ -466,10 +476,15 @@ function writeStore(value, key) {
 // ============================================================
 
 function renderPanel(snapshot) {
+    const triggerLabel = snapshot.trigger === 'cron'
+        ? '定时任务'
+        : (snapshot.trigger === 'panel'
+            ? 'Panel 手动刷新'
+            : (snapshot.trigger === 'panel-auto' ? 'Panel 自动刷新' : '网络变化'));
     const lines = [
         `API 请求结果: ${snapshot.summary || '失败'}`,
         `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
-        `触发方式: ${snapshot.trigger === 'cron' ? '定时任务' : '网络变化'}`,
+        `触发方式: ${triggerLabel}`,
         `更新时间: ${formatDate(snapshot.updatedAt)}`
     ];
 
@@ -492,7 +507,7 @@ function renderPanel(snapshot) {
     });
 
     return {
-        title: `PO0W 防火墙白名单 · ${snapshot.summary || '失败'}`,
+        title: `PO0 防火墙白名单 · ${snapshot.summary || '失败'}`,
         content: lines.join('\n'),
         style: snapshot.style || 'info'
     };

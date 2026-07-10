@@ -1,6 +1,6 @@
 #!name=DDNS 动态域名解析
 #!desc=支持阿里云 (aliyun) 和 DNSPod (dnspod) 的动态域名解析。网络变化时与每 30 分钟检测公网 IP 与 DNS A 记录是否一致，不一致则自动更新。成功结果按 /24 网段本地缓存 7 天，可指定 Wi-Fi SSID 下跳过执行。
-#!category=ddns-nft
+#!category=po0
 #!arguments=provider:aliyun,domain:example.com,rr:mobile,id:AccessKeyID/TokenID,secret:AccessKeySecret/TokenKey,skip_ssid:Home|Office
 #!arguments-desc=provider: DDNS 服务商，可选值 aliyun 或 dnspod\ndomain: 主域名，例如 example.com\nrr: 主机记录/子域名，根域名填 @\nid: 阿里云 AccessKeyId 或 DNSPod Token ID\nsecret: 阿里云 AccessKeySecret 或 DNSPod Token\nskip_ssid: 可选，指定 Wi-Fi SSID 下跳过执行，多个 SSID 用竖线分隔，例如 Home|Office
 
