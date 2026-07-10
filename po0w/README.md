@@ -80,6 +80,8 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 - 部分失败：部分请求成功、部分失败。
 - 失败：全部请求失败。
 
+如果 API 返回 `{"code":403,"message":"IP is already pinned to another slot."}`，脚本会将该请求显示为“已存在”，不计入失败。因为当前 IP 已经处于白名单的其他 slot，无需重复添加；如果本地保存有该请求的上一次 IP 和白名单，则继续沿用展示。
+
 ## Panel 展示
 
 Panel 会展示最近一次请求的：

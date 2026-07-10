@@ -275,15 +275,26 @@ function requestWhitelist(host, item, groupName) {
             }
 
             const status = response && Number(response.status || response.statusCode || 0);
-            if (status < 200 || status >= 300) {
-                resolve(createRequestFailure(item, groupName, `HTTP ${status || '未知状态'}`));
+            let data = null;
+            try {
+                data = JSON.parse(String(body || ''));
+            } catch (parseError) { /* handled below */ }
+
+            if (isAlreadyPinnedResponse(data)) {
+                resolve(createAlreadyPinnedResult(item, groupName));
                 return;
             }
 
-            let data;
-            try {
-                data = JSON.parse(String(body || ''));
-            } catch (parseError) {
+            if (status < 200 || status >= 300) {
+                const responseMessage = data && (data.message || data.error);
+                const detail = responseMessage
+                    ? `: ${sanitizeRequestError(formatServerError(responseMessage), item.token)}`
+                    : '';
+                resolve(createRequestFailure(item, groupName, `HTTP ${status || '未知状态'}${detail}`));
+                return;
+            }
+
+            if (!data) {
                 resolve(createRequestFailure(item, groupName, 'API 响应不是有效 JSON'));
                 return;
             }
@@ -305,6 +316,11 @@ function createRequestResult(item, groupName, data) {
 
     if (data.tokenAvailable === false) {
         error = 'token 不可用';
+    } else if (Number(data.code) >= 400) {
+        error = sanitizeRequestError(
+            formatServerError(data.message || data.error || `API 错误 ${data.code}`),
+            item.token
+        );
     } else if (data.success === false) {
         error = sanitizeRequestError(
             formatServerError(data.message || data.error || 'API 返回失败'),
@@ -324,6 +340,42 @@ function createRequestResult(item, groupName, data) {
         currentIp: hasCurrentIP ? data.currentIp.trim() : '-',
         whitelist
     };
+}
+
+function isAlreadyPinnedResponse(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    const message = String(data.message || '').trim();
+    return Number(data.code) === 403 && /^IP is already pinned to another slot\.?$/i.test(message);
+}
+
+function createAlreadyPinnedResult(item, groupName) {
+    const label = formatRequestLabel(groupName, item);
+    const previous = findPreviousRequestResult(label);
+    const hasPreviousData = previous && (
+        (previous.currentIp && previous.currentIp !== '-') ||
+        (Array.isArray(previous.whitelist) && previous.whitelist.length > 0)
+    );
+
+    return {
+        label,
+        slot: item.slot,
+        success: true,
+        statusText: '已存在',
+        detail: hasPreviousData
+            ? '当前 IP 已存在于其他 slot，无需重复添加；IP 和白名单沿用上一次结果'
+            : '当前 IP 已存在于其他 slot，无需重复添加；API 未返回当前 IP 和白名单',
+        error: '',
+        currentIp: hasPreviousData && previous.currentIp ? previous.currentIp : '-',
+        whitelist: hasPreviousData && Array.isArray(previous.whitelist) ? previous.whitelist : []
+    };
+}
+
+function findPreviousRequestResult(label) {
+    const snapshot = readSnapshot();
+    if (!snapshot || !Array.isArray(snapshot.results)) return null;
+    return snapshot.results.find(function (result) {
+        return result && result.label === label;
+    }) || null;
 }
 
 function createRequestFailure(item, groupName, error) {
@@ -513,7 +565,8 @@ function renderPanel(snapshot) {
     (snapshot.results || []).forEach(function (result) {
         lines.push('');
         lines.push(`【${result.label}】`);
-        lines.push(`请求结果: ${result.success ? '成功' : '失败'}`);
+        lines.push(`请求结果: ${result.statusText || (result.success ? '成功' : '失败')}`);
+        if (result.detail) lines.push(`说明: ${result.detail}`);
         if (result.error) lines.push(`错误: ${result.error}`);
         lines.push(`当前 IP: ${result.currentIp || '-'}`);
         lines.push('白名单:');
