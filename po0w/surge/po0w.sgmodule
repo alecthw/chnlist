@@ -2,7 +2,7 @@
 #!desc=网络变化时自动更新当前网络对应的防火墙白名单，并每 30 分钟定时兜底；Panel 展示最近一轮 API 请求结果。
 #!category=po0w
 #!system=ios
-#!arguments=host:124.221.69.228,cellular_tokens:,wifi_tokens:,skip_ssids:
+#!arguments=host:124.221.69.228,cellular_tokens:token1@3|token2@4,wifi_tokens:token2@5,skip_ssids:Home|Office
 #!arguments-desc=host: API 主机，填写 IP 地址或域名，默认 124.221.69.228\ncellular_tokens: 蜂窝网络使用的 token@slot_id，多个用竖线分隔\nwifi_tokens: Wi-Fi 使用的 token@slot_id，多个用竖线分隔\nskip_ssids: 不更新白名单的 Wi-Fi SSID，多个用竖线分隔
 
 [Script]
