@@ -33,20 +33,17 @@ function start() {
 async function runUpdate() {
     const cfg = buildConfig(rawArgs);
     const network = getNetworkInfo();
+    const skippedSSID = network.type === 'wifi' && cfg.skipSSIDs.includes(network.ssid);
 
-    if (network.type === 'wifi' && cfg.skipSSIDs.includes(network.ssid)) {
-        const snapshot = createSnapshot({
-            status: 'success',
-            summary: '成功',
-            style: 'info',
-            network,
-            trigger: cfg.trigger,
-            note: `SSID ${network.ssid} 命中 skip_ssids，已跳过`,
-            results: []
-        });
+    if (skippedSSID && cfg.trigger !== 'panel') {
+        const snapshot = createSkippedSnapshot(network, cfg.trigger);
         writeSnapshot(snapshot);
         console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
         return snapshot;
+    }
+
+    if (skippedSSID) {
+        console.log(`[${SCRIPT_NAME}] Panel 手动刷新忽略 skip_ssids，强制更新 Wi-Fi tokens`);
     }
 
     const selected = network.type === 'wifi' ? cfg.wifiTokens : cfg.cellularTokens;
@@ -402,6 +399,29 @@ function createSnapshot(options) {
     };
 }
 
+function createSkippedSnapshot(network, trigger) {
+    const previous = readSnapshot();
+    const note = `SSID ${network.ssid} 命中 skip_ssids，已跳过`;
+    const hasPreviousResults = previous && Array.isArray(previous.results) && previous.results.length > 0;
+    if (!hasPreviousResults) {
+        return createSnapshot({
+            status: 'success',
+            summary: '成功',
+            style: 'info',
+            network,
+            trigger,
+            note: `${note}；暂无上一次请求结果`,
+            results: []
+        });
+    }
+
+    return Object.assign({}, previous, {
+        network,
+        trigger,
+        note: `${note}；请求结果沿用上一次`
+    });
+}
+
 function createFailureSnapshot(error, trigger) {
     return createSnapshot({
         status: 'failure',
@@ -495,8 +515,8 @@ function renderPanel(snapshot) {
         lines.push(`【${result.label}】`);
         lines.push(`请求结果: ${result.success ? '成功' : '失败'}`);
         if (result.error) lines.push(`错误: ${result.error}`);
-        lines.push(`currentIp: ${result.currentIp || '-'}`);
-        lines.push('whitelist:');
+        lines.push(`当前 IP: ${result.currentIp || '-'}`);
+        lines.push('白名单:');
         if (result.whitelist && result.whitelist.length) {
             result.whitelist.forEach(function (entry) {
                 lines.push(`  ${entry.slot}: ${entry.ip}`);
