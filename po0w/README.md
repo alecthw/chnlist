@@ -2,13 +2,14 @@
 
 通过客户端当前的公网出口 IP 调用防火墙 API，自动维护目标服务器的访问白名单。
 
-目前仅支持 **Surge iOS**，后续将逐步支持其他客户端。
+目前支持 **Surge iOS** 和 **Egern**，后续将逐步支持其他客户端。
 
 ## 客户端支持
 
 | 客户端 | 状态 | 配置文件 |
 | --- | --- | --- |
 | Surge iOS | 已支持 | [`surge/po0w.sgmodule`](surge/po0w.sgmodule) |
+| Egern | 已支持 | [`egern/po0w.yaml`](egern/po0w.yaml) |
 | 其他客户端 | 计划中 | - |
 
 ## 功能
@@ -18,11 +19,13 @@
 - 根据当前网络环境自动选择蜂窝或 Wi-Fi token 组。
 - 支持一个网络配置多个 `token@slot_id`，并汇总展示全部请求结果。
 - 支持指定自动更新时需要跳过的 Wi-Fi SSID。
-- 点击 Panel 刷新按钮可立即手动更新。
-- 所有白名单 API 请求强制使用 Surge `DIRECT` 策略。
-- Panel 展示成功、失败或部分失败，以及当前 IP 和完整白名单。
+- Surge 可点击 Panel 刷新按钮立即更新；Egern 提供独立的“PO0 手动更新”脚本。
+- 所有白名单 API 请求强制使用客户端的 `DIRECT` 策略。
+- Surge Panel 与 Egern Widget 展示成功、失败或部分失败，以及当前 IP 和完整白名单。
 
 ## 安装
+
+### Surge
 
 在 Surge 中使用以下地址安装模块：
 
@@ -31,6 +34,16 @@ https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.sgmodule
 ```
 
 安装后编辑模块参数，将示例 token 替换为实际值。模块仅适用于 iOS。
+
+### Egern
+
+在 Egern 的“工具 → 模块”中使用以下地址安装模块：
+
+```text
+https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.yaml
+```
+
+安装后在模块的 Env 区域填写参数。界面中的 token 和 SSID 示例只是输入提示，必须替换为实际配置。需要立即更新时，在 Egern 脚本列表中运行“PO0 手动更新”；“PO0 状态”Widget 只负责读取并展示最近结果，不会自动调用 API。
 
 ## 参数
 
@@ -59,12 +72,14 @@ skip_ssids=Home|Office
 | 网络变化 | Wi-Fi | `wifi_tokens` | 匹配时跳过 |
 | 30 分钟定时任务 | 蜂窝 | `cellular_tokens` | 不适用 |
 | 30 分钟定时任务 | Wi-Fi | `wifi_tokens` | 匹配时跳过 |
-| Panel 手动刷新 | 蜂窝 | `cellular_tokens` | 不适用 |
-| Panel 手动刷新 | Wi-Fi | `wifi_tokens` | 忽略匹配并强制更新 |
+| Surge Panel / Egern 手动脚本 | 蜂窝 | `cellular_tokens` | 不适用 |
+| Surge Panel / Egern 手动脚本 | Wi-Fi | `wifi_tokens` | 忽略匹配并强制更新 |
 
-命中 `skip_ssids` 并自动跳过时，Panel 会继续展示上一次请求的状态、当前 IP、白名单和结果时间，不会用空结果覆盖。
+命中 `skip_ssids` 并自动跳过时，Panel / Widget 会继续展示上一次请求的状态、当前 IP、白名单和结果时间，不会用空结果覆盖。
 
-Panel 的自动刷新只读取本地保存的最近结果，不会调用白名单 API。只有点击 Panel 刷新按钮才会手动发起请求。
+Egern 在切网瞬间、离线或无法明确判断当前网络类型时不会猜测使用某组 token，也不会发起 API 请求；已有结果会继续保留展示。
+
+Surge Panel 的自动刷新和 Egern 状态 Widget 都只读取本地保存的最近结果，不会调用白名单 API。手动请求需要点击 Surge Panel 刷新按钮，或运行 Egern 的“PO0 手动更新”脚本。
 
 ## API 请求
 
@@ -82,9 +97,9 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 
 如果 API 返回 `{"code":403,"message":"IP is already pinned to another slot."}`，脚本会将该请求显示为“已存在”，不计入失败。因为当前 IP 已经处于白名单的其他 slot，无需重复添加；如果本地保存有该请求的上一次 IP 和白名单，则继续沿用展示。
 
-## Panel 展示
+## Panel / Widget 展示
 
-Panel 会展示最近一次请求的：
+Surge Panel 和 Egern Widget 会展示最近一次请求的：
 
 - API 请求结果和当时的网络环境。
 - 触发方式与结果时间。
@@ -92,13 +107,13 @@ Panel 会展示最近一次请求的：
 - 当前 IP。
 - 白名单，格式为 `slot: IP`。
 
-蜂窝和 Wi-Fi 不会分别保存结果，两种网络共用同一份最近结果快照。新的 API 请求结果会覆盖旧结果；遇到“IP 已存在于其他 slot”时，会优先按相同 token 跨网络复用上一次的当前 IP 和白名单，匹配不到时再使用最近一条可用结果。
+蜂窝和 Wi-Fi 不会分别保存结果，两种网络共用同一份最近结果快照。新的 API 请求结果会覆盖当前展示，最近可用结果历史仍保存在同一个存储键中；遇到“IP 已存在于其他 slot”时，会优先按相同 token 跨网络复用上一次的当前 IP 和白名单，匹配不到时再使用最近一条可用结果。
 
 持久化内容不包含原始 token；用于隔离不同模块配置的存储键只包含配置哈希。
 
 ## 注意事项
 
-- token 会保存在 Surge 模块参数中，请勿分享已填写真实 token 的配置或截图。
+- token 会保存在客户端模块参数中，请勿分享已填写真实 token 的配置或截图。
 - API 使用 HTTPS，并保持服务器证书校验开启。
 - 如果当前网络对应的 token 组为空，本次不会发起请求。
 - Wi-Fi SSID 匹配区分大小写。
@@ -107,6 +122,8 @@ Panel 会展示最近一次请求的：
 
 - [`surge/po0w.sgmodule`](surge/po0w.sgmodule)：Surge 模块配置。
 - [`surge/po0w.js`](surge/po0w.js)：网络判断、API 请求、结果聚合和 Panel 脚本。
+- [`egern/po0w.yaml`](egern/po0w.yaml)：Egern 模块配置。
+- [`egern/po0w.js`](egern/po0w.js)：使用 Egern `ctx` API 的原生实现，不依赖 Surge 适配层。
 
 ## 后续计划
 

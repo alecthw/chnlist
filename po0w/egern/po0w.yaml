@@ -1,0 +1,78 @@
+name: PO0 防火墙白名单
+description: 网络变化时自动更新当前网络对应的防火墙白名单，每 30 分钟定时兜底，并提供手动更新脚本与状态小组件。
+author: alecthw
+homepage: https://github.com/alecthw/chnlist
+manual: https://github.com/alecthw/chnlist/tree/main/po0w#readme
+icon: shield.fill
+
+env_schema:
+  host:
+    name: API 主机
+    description: 填写 IP 地址或域名，默认 124.221.69.228，不要包含路径
+    default_value: 124.221.69.228
+  cellular_tokens:
+    name: 蜂窝网络 Tokens
+    description: 格式为 token@slot_id，多个使用竖线分隔；与 Wi-Fi Tokens 不能同时为空
+    default_value: token1@3|token2@4
+  wifi_tokens:
+    name: Wi-Fi Tokens
+    description: 格式为 token@slot_id，多个使用竖线分隔；与蜂窝网络 Tokens 不能同时为空
+    default_value: token1@5
+  skip_ssids:
+    name: 跳过 SSID
+    description: 网络变化和定时任务在这些 Wi-Fi 下不更新；手动更新会忽略此项
+    default_value: Home|Office
+
+scriptings:
+  - network:
+      name: PO0 网络变化
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.js
+      timeout: 30
+      env:
+        mode: update
+        trigger: network
+        host: ''
+        cellular_tokens: ''
+        wifi_tokens: ''
+        skip_ssids: ''
+
+  - schedule:
+      name: PO0 定时更新
+      cron: "*/30 * * * *"
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.js
+      timeout: 30
+      env:
+        mode: update
+        trigger: schedule
+        host: ''
+        cellular_tokens: ''
+        wifi_tokens: ''
+        skip_ssids: ''
+
+  - generic:
+      name: PO0 手动更新
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.js
+      timeout: 30
+      env:
+        mode: manual
+        trigger: manual
+        host: ''
+        cellular_tokens: ''
+        wifi_tokens: ''
+        skip_ssids: ''
+
+  - generic:
+      name: PO0 状态
+      script_url: https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.js
+      timeout: 30
+      env:
+        mode: widget
+        trigger: widget
+        host: ''
+        cellular_tokens: ''
+        wifi_tokens: ''
+        skip_ssids: ''
+
+widgets:
+  - name: PO0 状态
+    script_name: PO0 状态
