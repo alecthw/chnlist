@@ -10,6 +10,7 @@ const SCRIPT_NAME = 'PO0W';
 const DEFAULT_HOST = '124.221.69.228';
 const REQUEST_TIMEOUT = 10;
 const STORE_PREFIX = 'po0w:firewall';
+const NETWORK_DEBUG = true;
 
 const rawArgs = parseArgs(getArgument());
 const mode = rawArgs.mode || 'update';
@@ -31,6 +32,7 @@ function start() {
 }
 
 async function runUpdate() {
+    logNetworkDiagnostics();
     const cfg = buildConfig(rawArgs);
     const network = getNetworkInfo();
     const skippedSSID = network.type === 'wifi' && cfg.skipSSIDs.includes(network.ssid);
@@ -229,6 +231,43 @@ function parseList(value) {
     return String(value).split('|').map(function (item) {
         return item.trim();
     }).filter(Boolean);
+}
+
+function logNetworkDiagnostics() {
+    if (!NETWORK_DEBUG) return;
+
+    let networkValue;
+    let environmentValue;
+
+    try {
+        networkValue = typeof $network === 'undefined' ? '<undefined>' : $network;
+    } catch (error) {
+        networkValue = `<读取失败: ${getErrorMessage(error)}>`;
+    }
+
+    try {
+        const environment = typeof $environment === 'undefined' || !$environment ? {} : $environment;
+        environmentValue = {
+            system: environment.system || '',
+            surgeVersion: environment['surge-version'] || '',
+            surgeBuild: environment['surge-build'] || '',
+            deviceModel: environment['device-model'] || ''
+        };
+    } catch (error) {
+        environmentValue = `<读取失败: ${getErrorMessage(error)}>`;
+    }
+
+    console.log(`[${SCRIPT_NAME}][network-debug] environment=${safeJSONStringify(environmentValue)}`);
+    console.log(`[${SCRIPT_NAME}][network-debug] $network=${safeJSONStringify(networkValue)}`);
+}
+
+function safeJSONStringify(value) {
+    try {
+        const result = JSON.stringify(value);
+        return typeof result === 'undefined' ? String(value) : result;
+    } catch (error) {
+        return `<JSON 序列化失败: ${getErrorMessage(error)}>`;
+    }
 }
 
 function getNetworkInfo() {
