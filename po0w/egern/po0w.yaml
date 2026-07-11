@@ -12,11 +12,11 @@ env_schema:
     default_value: 124.221.69.228
   cellular_tokens:
     name: 蜂窝网络 Tokens
-    description: 格式为 token@slot_id，多个使用竖线分隔；与 Wi-Fi Tokens 不能同时为空
+    description: 格式为 token@slot_id，多个使用竖线分隔；与非蜂窝网络 Tokens 不能同时为空
     default_value: token1@3|token2@4
   wifi_tokens:
-    name: Wi-Fi Tokens
-    description: 格式为 token@slot_id，多个使用竖线分隔；与蜂窝网络 Tokens 不能同时为空
+    name: 非蜂窝网络 Tokens
+    description: Wi-Fi、有线网卡及其他非蜂窝网络使用；格式为 token@slot_id，多个使用竖线分隔；与蜂窝网络 Tokens 不能同时为空
     default_value: token1@5
   skip_ssids:
     name: 跳过 SSID

@@ -48,14 +48,6 @@ function runWidget(ctx, env) {
 
 async function runUpdate(ctx, cfg, env) {
     const network = getNetworkInfo(ctx);
-
-    if (network.type === 'unknown') {
-        const snapshot = createUnknownNetworkSnapshot(ctx, env, network, cfg.trigger);
-        writeSnapshot(ctx, env, snapshot);
-        log(ctx, `[${SCRIPT_NAME}] ${snapshot.note}`);
-        return snapshot;
-    }
-
     const skippedSSID = network.type === 'wifi' && cfg.skipSSIDs.includes(network.ssid);
 
     if (skippedSSID && cfg.trigger !== 'manual') {
@@ -70,7 +62,9 @@ async function runUpdate(ctx, cfg, env) {
     }
 
     const selected = network.type === 'wifi' ? cfg.wifiTokens : cfg.cellularTokens;
-    const groupName = network.type === 'wifi' ? 'Wi-Fi' : '蜂窝';
+    const groupName = network.type === 'wifi'
+        ? (network.ssid ? 'Wi-Fi' : '非蜂窝')
+        : '蜂窝';
 
     if (!selected.length) {
         const snapshot = createSnapshot({
@@ -206,27 +200,32 @@ function parseList(value) {
 function getNetworkInfo(ctx) {
     const device = ctx && ctx.device ? ctx.device : {};
     const wifi = device.wifi || {};
-    const cellular = device.cellular || {};
     const ssid = wifi.ssid === null || typeof wifi.ssid === 'undefined' ? '' : String(wifi.ssid);
-
-    if (ssid.trim()) {
-        return { type: 'wifi', ssid, label: `Wi-Fi（SSID: ${ssid}）` };
-    }
-
     const ipv4Interface = device.ipv4 && device.ipv4.interface ? String(device.ipv4.interface) : '';
     const ipv6Interface = device.ipv6 && device.ipv6.interface ? String(device.ipv6.interface) : '';
-    const interfaceNames = [ipv4Interface, ipv6Interface].filter(Boolean);
-    const hasCellular = Boolean(
-        cellular.carrier ||
-        cellular.radio ||
-        interfaceNames.some(function(name) { return /^pdp_ip\d+$/i.test(name); })
-    );
+    const interfaceNames = [];
+    [ipv4Interface, ipv6Interface].forEach(function(value) {
+        const name = String(value || '').trim();
+        if (name && !interfaceNames.includes(name)) interfaceNames.push(name);
+    });
+    const hasCellular = interfaceNames.length > 0 && interfaceNames.every(function(name) {
+        return /^pdp_ip\d+$/i.test(name);
+    });
     if (hasCellular) {
-        return { type: 'cellular', ssid: '', label: '蜂窝网络' };
+        return { type: 'cellular', ssid: '', interfaces: interfaceNames, label: '蜂窝网络' };
     }
 
-    const interfaceLabel = interfaceNames.length ? `（接口: ${interfaceNames.join(' / ')}）` : '';
-    return { type: 'unknown', ssid: '', label: `未知网络${interfaceLabel}` };
+    const normalizedSSID = ssid.trim();
+    return {
+        type: 'wifi',
+        ssid: normalizedSSID,
+        interfaces: interfaceNames,
+        label: normalizedSSID
+            ? `Wi-Fi（SSID: ${normalizedSSID}）`
+            : (interfaceNames.length
+                ? `非蜂窝网络（接口: ${interfaceNames.join(' / ')}）`
+                : '非蜂窝网络（接口未知）')
+    };
 }
 
 // ============================================================
@@ -370,12 +369,14 @@ function findPreviousRequestResult(ctx, env, item, label) {
 function getEquivalentRequestLabels(env, token) {
     const labels = [];
     [
-        { value: env.cellular_tokens, type: 'cellular', groupName: '蜂窝' },
-        { value: env.wifi_tokens, type: 'wifi', groupName: 'Wi-Fi' }
+        { value: env.cellular_tokens, type: 'cellular', groupNames: ['蜂窝'] },
+        { value: env.wifi_tokens, type: 'wifi', groupNames: ['Wi-Fi', '非蜂窝'] }
     ].forEach(function(group) {
         parseTokenList(group.value, group.type).forEach(function(item) {
             if (item.valid && item.token === token) {
-                labels.push(formatRequestLabel(group.groupName, item));
+                group.groupNames.forEach(function(groupName) {
+                    labels.push(formatRequestLabel(groupName, item));
+                });
             }
         });
     });
@@ -497,31 +498,6 @@ function createEmptySnapshot(ctx) {
         lastUsableResults: [],
         updatedAt: 0
     };
-}
-
-function createUnknownNetworkSnapshot(ctx, env, network, trigger) {
-    const previous = readSnapshot(ctx, env);
-    const note = '无法识别当前网络，未发起 API 请求';
-    const previousRequest = getPreviousRequestDisplay(previous);
-    if (!previousRequest) {
-        return createSnapshot({
-            status: 'failure',
-            summary: '失败',
-            style: 'error',
-            network,
-            trigger,
-            note,
-            results: []
-        });
-    }
-
-    return Object.assign({}, previous, {
-        network,
-        trigger,
-        results: previousRequest.results,
-        updatedAt: previousRequest.updatedAt,
-        note: `${note}；请求结果沿用上一次`
-    });
 }
 
 function createSkippedSnapshot(ctx, env, network, trigger) {

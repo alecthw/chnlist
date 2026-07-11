@@ -4,13 +4,14 @@
 // - network-changed：按当前网络更新对应 token 组
 // - cron：每 30 分钟执行一次
 // - panel：点击刷新按钮手动更新；自动刷新只读取最近一轮结果
+// - manual：Surge Mac 从脚本列表手动更新
 // =============================================================
 
 const SCRIPT_NAME = 'PO0W';
 const DEFAULT_HOST = '124.221.69.228';
 const REQUEST_TIMEOUT = 10;
 const STORE_PREFIX = 'po0w:firewall';
-const NETWORK_DEBUG = true;
+const NETWORK_DEBUG = false;
 
 const rawArgs = parseArgs(getArgument());
 const mode = rawArgs.mode || 'update';
@@ -21,12 +22,14 @@ function start() {
         return;
     }
 
-    runUpdate().then(function () {
+    runUpdate().then(function (snapshot) {
+        if (mode === 'manual') notifyManualResult(snapshot);
         $done();
     }).catch(function (error) {
         const snapshot = createFailureSnapshot(error);
         writeSnapshot(snapshot);
         console.log(`[${SCRIPT_NAME}] ${getErrorMessage(error)}`);
+        if (mode === 'manual') notifyManualResult(snapshot);
         $done();
     });
 }
@@ -37,7 +40,7 @@ async function runUpdate() {
     const network = getNetworkInfo();
     const skippedSSID = network.type === 'wifi' && cfg.skipSSIDs.includes(network.ssid);
 
-    if (skippedSSID && cfg.trigger !== 'panel') {
+    if (skippedSSID && !isManualTrigger(cfg.trigger)) {
         const snapshot = createSkippedSnapshot(network, cfg.trigger);
         writeSnapshot(snapshot);
         console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
@@ -45,11 +48,13 @@ async function runUpdate() {
     }
 
     if (skippedSSID) {
-        console.log(`[${SCRIPT_NAME}] Panel 手动刷新忽略 skip_ssids，强制更新 Wi-Fi tokens`);
+        console.log(`[${SCRIPT_NAME}] 手动更新忽略 skip_ssids，强制更新 Wi-Fi tokens`);
     }
 
     const selected = network.type === 'wifi' ? cfg.wifiTokens : cfg.cellularTokens;
-    const groupName = network.type === 'wifi' ? 'Wi-Fi' : '蜂窝';
+    const groupName = network.type === 'wifi'
+        ? (network.ssid ? 'Wi-Fi' : '非蜂窝')
+        : '蜂窝';
 
     if (!selected.length) {
         const snapshot = createSnapshot({
@@ -181,8 +186,14 @@ function buildConfig(args) {
         cellularTokens,
         wifiTokens,
         skipSSIDs: parseList(args.skip_ssids),
-        trigger: args.trigger === 'cron' ? 'cron' : (args.trigger === 'panel' ? 'panel' : 'event')
+        trigger: args.trigger === 'cron'
+            ? 'cron'
+            : (args.trigger === 'panel' ? 'panel' : (args.trigger === 'manual' ? 'manual' : 'event'))
     };
+}
+
+function isManualTrigger(trigger) {
+    return trigger === 'panel' || trigger === 'manual';
 }
 
 function getScriptTrigger() {
@@ -271,22 +282,71 @@ function safeJSONStringify(value) {
 }
 
 function getNetworkInfo() {
-    const ssid = getCurrentSSID();
-    if (ssid) {
-        return { type: 'wifi', ssid, label: `Wi-Fi（SSID: ${ssid}）` };
+    const network = getSurgeNetwork();
+    const interfaces = getPrimaryInterfaces(network);
+    const ssid = getCurrentSSID(network);
+    const cellular = interfaces.length > 0 && interfaces.every(isCellularInterface);
+
+    if (cellular) {
+        return {
+            type: 'cellular',
+            ssid: '',
+            interfaces,
+            label: '蜂窝网络'
+        };
     }
-    return { type: 'cellular', ssid: '', label: '蜂窝网络' };
+
+    return {
+        type: 'wifi',
+        ssid,
+        interfaces,
+        label: ssid
+            ? `Wi-Fi（SSID: ${ssid}）`
+            : (interfaces.length
+                ? `非蜂窝网络（接口: ${interfaces.join(' / ')}）`
+                : '非蜂窝网络（接口未知）')
+    };
 }
 
-function getCurrentSSID() {
+function getSurgeNetwork() {
     try {
-        if (typeof $network !== 'undefined' && $network && $network.wifi && $network.wifi.ssid) {
-            return String($network.wifi.ssid);
+        return typeof $network !== 'undefined' && $network ? $network : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function getPrimaryInterfaces(network) {
+    const value = network && typeof network === 'object' ? network : {};
+    const candidates = [
+        value.v4 && value.v4.primaryInterface,
+        value.v6 && value.v6.primaryInterface
+    ];
+    const interfaces = [];
+
+    candidates.forEach(function (candidate) {
+        const name = candidate === null || typeof candidate === 'undefined'
+            ? ''
+            : String(candidate).trim();
+        if (name && !interfaces.includes(name)) interfaces.push(name);
+    });
+    return interfaces;
+}
+
+function isCellularInterface(name) {
+    return /^pdp_ip\d+$/i.test(String(name || '').trim());
+}
+
+function getCurrentSSID(network) {
+    try {
+        const value = network && typeof network === 'object' ? network : getSurgeNetwork();
+        if (value.wifi && value.wifi.ssid) {
+            return String(value.wifi.ssid).trim();
         }
         if (typeof $environment !== 'undefined' && $environment) {
-            if ($environment.ssid) return String($environment.ssid);
+            if ($environment.ssid) return String($environment.ssid).trim();
             if ($environment.wifi && $environment.wifi.ssid) {
-                return String($environment.wifi.ssid);
+                return String($environment.wifi.ssid).trim();
             }
         }
     } catch (error) { /* noop */ }
@@ -429,12 +489,14 @@ function findPreviousRequestResult(item, label) {
 function getEquivalentRequestLabels(token) {
     const labels = [];
     [
-        { value: rawArgs.cellular_tokens, type: 'cellular', groupName: '蜂窝' },
-        { value: rawArgs.wifi_tokens, type: 'wifi', groupName: 'Wi-Fi' }
+        { value: rawArgs.cellular_tokens, type: 'cellular', groupNames: ['蜂窝'] },
+        { value: rawArgs.wifi_tokens, type: 'wifi', groupNames: ['Wi-Fi', '非蜂窝'] }
     ].forEach(function (group) {
         parseTokenList(group.value, group.type).forEach(function (item) {
             if (item.valid && item.token === token) {
-                labels.push(formatRequestLabel(group.groupName, item));
+                group.groupNames.forEach(function (groupName) {
+                    labels.push(formatRequestLabel(groupName, item));
+                });
             }
         });
     });
@@ -482,7 +544,7 @@ function sanitizeRequestError(error, token) {
     let message = getErrorMessage(error);
     if (token) {
         [String(token), encodeURIComponent(String(token))].forEach(function (secret) {
-            if (secret.length >= 4) message = message.split(secret).join('***');
+            if (secret) message = message.split(secret).join('***');
         });
     }
     return message.length > 200 ? `${message.substring(0, 197)}...` : message;
@@ -550,7 +612,9 @@ function createFailureSnapshot(error, trigger) {
         summary: '失败',
         style: 'error',
         network: getNetworkInfo(),
-        trigger: trigger || (rawArgs.trigger === 'cron' ? 'cron' : (rawArgs.trigger === 'panel' ? 'panel' : 'event')),
+        trigger: trigger || (rawArgs.trigger === 'cron'
+            ? 'cron'
+            : (rawArgs.trigger === 'panel' ? 'panel' : (rawArgs.trigger === 'manual' ? 'manual' : 'event'))),
         note: `参数或运行错误: ${getErrorMessage(error)}`,
         results: []
     });
@@ -622,7 +686,9 @@ function renderPanel(snapshot) {
         ? '定时任务'
         : (snapshot.trigger === 'panel'
             ? 'Panel 手动刷新'
-            : (snapshot.trigger === 'panel-auto' ? 'Panel 自动刷新' : '网络变化'));
+            : (snapshot.trigger === 'manual'
+                ? '手动更新'
+                : (snapshot.trigger === 'panel-auto' ? 'Panel 自动刷新' : '网络变化')));
     const lines = [
         `API 请求结果: ${snapshot.summary || '失败'}`,
         `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
@@ -656,6 +722,21 @@ function renderPanel(snapshot) {
     };
 }
 
+function notifyManualResult(snapshot) {
+    try {
+        if (typeof $notification === 'undefined' || !$notification || typeof $notification.post !== 'function') return;
+        const requestLines = (snapshot.results || []).slice(0, 5).map(function (result) {
+            return `${result.label}: ${result.statusText || (result.success ? '成功' : '失败')}`;
+        });
+        const body = [
+            snapshot.network && snapshot.network.label ? snapshot.network.label : '未知网络',
+            snapshot.note || '',
+            requestLines.join('\n')
+        ].filter(Boolean).join('\n');
+        $notification.post(`PO0W 白名单 · ${snapshot.summary || '失败'}`, '', body);
+    } catch (error) { /* noop */ }
+}
+
 function finishPanel(result) {
     $done({
         title: result.title,
@@ -683,6 +764,8 @@ if (typeof module !== 'undefined' && module.exports) {
         parseTokenList,
         parseList,
         getNetworkInfo,
+        getPrimaryInterfaces,
+        isCellularInterface,
         createRequestResult,
         normalizeWhitelist,
         renderPanel,
