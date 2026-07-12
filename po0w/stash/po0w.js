@@ -1,0 +1,1063 @@
+// =============================================================
+// Stash 原生 PO0W 防火墙白名单脚本
+//
+// - cron：每 30 分钟更新当前网络对应的 token 组
+// - tile：自动刷新时只读取缓存，不发起 API 请求
+// - tile button：手动强制更新；非蜂窝网络下忽略 skip_ssids
+//
+// Stash 暂无 network-changed 脚本触发类型，因此网络分类仅用于
+// 定时任务和 Tile 手动更新时选择 cellular_tokens / wifi_tokens。
+// =============================================================
+
+const SCRIPT_NAME = 'PO0W';
+const DEFAULT_HOST = '124.221.69.228';
+const REQUEST_TIMEOUT = 10;
+const STORE_PREFIX = 'po0w:firewall:stash';
+const DIRECT_HEADER = 'X-Stash-Selected-Proxy';
+
+async function start(root) {
+    const runtime = root || getGlobalRoot();
+    const args = parseArgs(getArgument(runtime));
+    const mode = detectMode(runtime, args);
+
+    if (mode === 'tile') {
+        return runTile(runtime, args);
+    }
+
+    const trigger = mode === 'manual' ? 'manual' : detectUpdateTrigger(runtime, args);
+    try {
+        const cfg = buildConfig(args, trigger);
+        const snapshot = await runUpdate(runtime, args, cfg);
+        if (trigger === 'manual') notifyManualResult(runtime, snapshot);
+        finish(runtime);
+        return snapshot;
+    } catch (error) {
+        const snapshot = createFailureSnapshot(runtime, args, error, trigger);
+        writeSnapshot(runtime, args, snapshot);
+        log(runtime, `[${SCRIPT_NAME}] ${snapshot.note}`);
+        if (trigger === 'manual') notifyManualResult(runtime, snapshot);
+        finish(runtime);
+        return snapshot;
+    }
+}
+
+async function runTile(root, args) {
+    // `$trigger` 尚未出现在 Stash 官方文档中。已提供该字段的版本用
+    // button 表示手动刷新；未提供该字段的版本也按手动刷新处理，避免
+    // 不设 interval 的 Tile 点击后只读缓存而无法更新。
+    const tileTrigger = getTileTrigger(root);
+    const isManualRefresh = tileTrigger === 'button' || tileTrigger === '';
+
+    if (!isManualRefresh) {
+        try {
+            buildConfig(args, 'tile');
+            const snapshot = readSnapshot(root, args) || createEmptySnapshot(root);
+            finishTile(root, renderTile(snapshot));
+            return snapshot;
+        } catch (error) {
+            const snapshot = createFailureSnapshot(root, args, error, 'tile');
+            finishTile(root, renderTile(snapshot));
+            return snapshot;
+        }
+    }
+
+    try {
+        const cfg = buildConfig(args, 'manual');
+        const snapshot = await runUpdate(root, args, cfg);
+        notifyManualResult(root, snapshot);
+        finishTile(root, renderTile(snapshot));
+        return snapshot;
+    } catch (error) {
+        const snapshot = createFailureSnapshot(root, args, error, 'manual');
+        writeSnapshot(root, args, snapshot);
+        log(root, `[${SCRIPT_NAME}] ${snapshot.note}`);
+        notifyManualResult(root, snapshot);
+        finishTile(root, renderTile(snapshot));
+        return snapshot;
+    }
+}
+
+async function runUpdate(root, args, cfg) {
+    const network = getNetworkInfo(root);
+    const skippedSSID = network.type === 'wifi'
+        && Boolean(network.ssid)
+        && cfg.skipSSIDs.includes(network.ssid);
+
+    if (skippedSSID && cfg.trigger !== 'manual') {
+        const snapshot = createSkippedSnapshot(root, args, network, cfg.trigger);
+        writeSnapshot(root, args, snapshot);
+        log(root, `[${SCRIPT_NAME}] ${snapshot.note}`);
+        return snapshot;
+    }
+
+    if (skippedSSID) {
+        log(root, `[${SCRIPT_NAME}] 手动更新忽略 skip_ssids，强制更新 Wi-Fi tokens`);
+    }
+
+    const selected = network.type === 'cellular' ? cfg.cellularTokens : cfg.wifiTokens;
+    const groupName = network.type === 'cellular'
+        ? '蜂窝'
+        : (network.ssid ? 'Wi-Fi' : '非蜂窝');
+
+    if (!selected.length) {
+        const snapshot = createSnapshot({
+            status: 'success',
+            summary: '成功',
+            style: 'info',
+            network,
+            trigger: cfg.trigger,
+            note: `未配置 ${network.type === 'cellular' ? 'cellular_tokens' : 'wifi_tokens'}，无需请求`,
+            results: []
+        });
+        writeSnapshot(root, args, snapshot);
+        log(root, `[${SCRIPT_NAME}] ${snapshot.note}`);
+        return snapshot;
+    }
+
+    const tasks = selected.map(function(item) {
+        if (!item.valid) {
+            return Promise.resolve(createRequestFailure(item, groupName, item.error));
+        }
+        return requestWhitelist(root, args, cfg.host, item, groupName);
+    });
+    const results = await Promise.all(tasks);
+    const successCount = results.filter(function(result) { return result.success; }).length;
+    const failureCount = results.length - successCount;
+    let status = 'success';
+    let summary = '成功';
+    let style = 'good';
+
+    if (successCount === 0) {
+        status = 'failure';
+        summary = '失败';
+        style = 'error';
+    } else if (failureCount > 0) {
+        status = 'partial';
+        summary = '部分失败';
+        style = 'alert';
+    }
+
+    const snapshot = createSnapshot({
+        status,
+        summary,
+        style,
+        network,
+        trigger: cfg.trigger,
+        note: `${successCount}/${results.length} 个请求成功`,
+        results
+    });
+    writeSnapshot(root, args, snapshot);
+    log(root, `[${SCRIPT_NAME}] ${network.label}：${summary}，${snapshot.note}`);
+    return snapshot;
+}
+
+// ============================================================
+// 参数与运行模式
+// ============================================================
+
+function getArgument(root) {
+    try {
+        return root && typeof root.$argument !== 'undefined'
+            ? String(root.$argument || '')
+            : '';
+    } catch (error) {
+        return '';
+    }
+}
+
+function parseArgs(argument) {
+    const result = {};
+    if (!argument) return result;
+
+    String(argument).split('&').forEach(function(pair) {
+        const index = pair.indexOf('=');
+        if (index <= 0) return;
+        const key = pair.substring(0, index).trim();
+        const value = decodeArgValue(pair.substring(index + 1).trim());
+        if (key) result[key] = value;
+    });
+    return result;
+}
+
+function decodeArgValue(value) {
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        return value;
+    }
+}
+
+function detectMode(root, args) {
+    const requested = String(args.mode || '').trim().toLowerCase();
+    if (requested === 'tile') return 'tile';
+    if (requested === 'manual') return 'manual';
+    if (requested === 'update') return 'update';
+    return getScriptType(root) === 'tile' ? 'tile' : 'update';
+}
+
+function detectUpdateTrigger(root, args) {
+    const requested = String(args.trigger || '').trim().toLowerCase();
+    if (requested === 'manual') return 'manual';
+    if (requested === 'cron' || requested === 'schedule') return 'cron';
+    return getScriptType(root) === 'cron' ? 'cron' : 'update';
+}
+
+function getScriptType(root) {
+    try {
+        const script = root && root.$script && typeof root.$script === 'object'
+            ? root.$script
+            : {};
+        return String(script.type || '').trim().toLowerCase();
+    } catch (error) {
+        return '';
+    }
+}
+
+function getTileTrigger(root) {
+    try {
+        return root && typeof root.$trigger !== 'undefined'
+            ? String(root.$trigger || '').trim().toLowerCase()
+            : '';
+    } catch (error) {
+        return '';
+    }
+}
+
+function buildConfig(args, trigger) {
+    const cellularTokens = parseTokenList(args.cellular_tokens, 'cellular');
+    const wifiTokens = parseTokenList(args.wifi_tokens, 'wifi');
+    if (!cellularTokens.length && !wifiTokens.length) {
+        throw new Error('cellular_tokens 和 wifi_tokens 不能全空');
+    }
+
+    return {
+        host: normalizeHost(args.host || DEFAULT_HOST),
+        cellularTokens,
+        wifiTokens,
+        skipSSIDs: parseList(args.skip_ssids),
+        trigger: trigger || 'update'
+    };
+}
+
+function normalizeHost(value) {
+    let host = String(value || '').trim();
+    host = host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    if (!host || /[\/?#@]/.test(host)) {
+        throw new Error('host 必须是 IP 地址或域名，可包含端口但不能包含路径');
+    }
+
+    const colonCount = (host.match(/:/g) || []).length;
+    if (colonCount > 1 && host.charAt(0) !== '[') host = `[${host}]`;
+    return host;
+}
+
+function parseTokenList(value, type) {
+    if (!value) return [];
+
+    return String(value).split('|').map(function(part) {
+        return part.trim();
+    }).filter(Boolean).map(function(part, index) {
+        const separator = part.lastIndexOf('@');
+        const token = separator >= 0 ? part.substring(0, separator).trim() : '';
+        const slot = separator >= 0 ? part.substring(separator + 1).trim() : '';
+        const valid = Boolean(token) && /^\d+$/.test(slot);
+        return {
+            type,
+            index: index + 1,
+            token,
+            slot: slot || '?',
+            valid,
+            error: valid ? '' : '格式错误，应为 token@slot_id，且 slot_id 为非负整数'
+        };
+    });
+}
+
+function parseList(value) {
+    if (!value) return [];
+    return String(value).split('|').map(function(item) {
+        return item.trim();
+    }).filter(Boolean);
+}
+
+// ============================================================
+// 网络环境
+// ============================================================
+
+function getNetworkInfo(root) {
+    const network = getNetwork(root);
+    const interfaces = getPrimaryInterfaces(network);
+    const ssid = getCurrentSSID(root, network);
+    const cellular = interfaces.length > 0 && interfaces.every(isCellularInterface);
+
+    if (cellular) {
+        return {
+            type: 'cellular',
+            ssid: '',
+            interfaces,
+            label: '蜂窝网络'
+        };
+    }
+
+    return {
+        type: 'wifi',
+        ssid,
+        interfaces,
+        label: ssid
+            ? `Wi-Fi（SSID: ${ssid}）`
+            : (interfaces.length
+                ? `非蜂窝网络（接口: ${interfaces.join(' / ')}）`
+                : '非蜂窝网络（接口未知）')
+    };
+}
+
+function getNetwork(root) {
+    try {
+        return root && root.$network && typeof root.$network === 'object'
+            ? root.$network
+            : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function getPrimaryInterfaces(network) {
+    const value = network && typeof network === 'object' ? network : {};
+    const candidates = [
+        value.v4 && value.v4.primaryInterface,
+        value.v6 && value.v6.primaryInterface
+    ];
+    const interfaces = [];
+
+    candidates.forEach(function(candidate) {
+        const name = candidate === null || typeof candidate === 'undefined'
+            ? ''
+            : String(candidate).trim();
+        if (name && !interfaces.includes(name)) interfaces.push(name);
+    });
+    return interfaces;
+}
+
+function isCellularInterface(name) {
+    return /^pdp_ip\d+$/i.test(String(name || '').trim());
+}
+
+function getCurrentSSID(root, network) {
+    try {
+        const value = network && typeof network === 'object' ? network : {};
+        if (value.wifi && value.wifi.ssid) {
+            return String(value.wifi.ssid).trim();
+        }
+
+        const environment = root && root.$environment && typeof root.$environment === 'object'
+            ? root.$environment
+            : {};
+        if (environment.ssid) return String(environment.ssid).trim();
+        if (environment.wifi && environment.wifi.ssid) {
+            return String(environment.wifi.ssid).trim();
+        }
+    } catch (error) { /* noop */ }
+    return '';
+}
+
+// ============================================================
+// API 请求
+// ============================================================
+
+function requestWhitelist(root, args, host, item, groupName) {
+    const url = `https://${host}/api/firewall/${encodeURIComponent(item.token)}/add?slot=${encodeURIComponent(item.slot)}`;
+    const options = {
+        url,
+        headers: {
+            Accept: 'application/json',
+            [DIRECT_HEADER]: encodeURIComponent('DIRECT')
+        },
+        timeout: REQUEST_TIMEOUT
+    };
+
+    return new Promise(function(resolve) {
+        const client = root && root.$httpClient;
+        if (!client || typeof client.get !== 'function') {
+            resolve(createRequestFailure(item, groupName, 'Stash $httpClient 不可用'));
+            return;
+        }
+
+        try {
+            client.get(options, function(error, response, body) {
+                if (error) {
+                    resolve(createRequestFailure(
+                        item,
+                        groupName,
+                        sanitizeRequestError(error, item.token)
+                    ));
+                    return;
+                }
+
+                const status = response && Number(response.status || response.statusCode || 0);
+                const parsed = parseResponseJSON(body);
+                const data = parsed.data;
+
+                if (isAlreadyPinnedResponse(data)) {
+                    resolve(createAlreadyPinnedResult(root, args, item, groupName));
+                    return;
+                }
+
+                if (status < 200 || status >= 300) {
+                    const responseMessage = data && (data.message || data.error);
+                    const detail = responseMessage
+                        ? `: ${sanitizeRequestError(formatServerError(responseMessage), item.token)}`
+                        : '';
+                    resolve(createRequestFailure(
+                        item,
+                        groupName,
+                        `HTTP ${status || '未知状态'}${detail}`
+                    ));
+                    return;
+                }
+
+                if (!parsed.ok) {
+                    resolve(createRequestFailure(item, groupName, 'API 响应不是有效 JSON'));
+                    return;
+                }
+
+                resolve(createRequestResult(item, groupName, data));
+            });
+        } catch (error) {
+            resolve(createRequestFailure(
+                item,
+                groupName,
+                sanitizeRequestError(error, item.token)
+            ));
+        }
+    });
+}
+
+function parseResponseJSON(body) {
+    if (body && typeof body === 'object') {
+        return { ok: true, data: body };
+    }
+    try {
+        return { ok: true, data: JSON.parse(String(body || '')) };
+    } catch (error) {
+        return { ok: false, data: null };
+    }
+}
+
+function createRequestResult(item, groupName, data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return createRequestFailure(item, groupName, 'API 响应格式错误');
+    }
+
+    const hasCurrentIP = typeof data.currentIp === 'string' && data.currentIp.trim() !== '';
+    const hasWhitelist = Array.isArray(data.whitelist);
+    const whitelist = hasWhitelist ? normalizeWhitelist(data.whitelist) : [];
+    let error = '';
+
+    if (data.tokenAvailable === false) {
+        error = 'token 不可用';
+    } else if (Number(data.code) >= 400) {
+        error = sanitizeRequestError(
+            formatServerError(data.message || data.error || `API 错误 ${data.code}`),
+            item.token
+        );
+    } else if (data.success === false) {
+        error = sanitizeRequestError(
+            formatServerError(data.message || data.error || 'API 返回失败'),
+            item.token
+        );
+    } else if (data.error) {
+        error = sanitizeRequestError(formatServerError(data.error), item.token);
+    } else if (!hasCurrentIP || !hasWhitelist) {
+        error = 'API 响应缺少 currentIp 或 whitelist';
+    }
+
+    return {
+        label: formatRequestLabel(groupName, item),
+        slot: item.slot,
+        success: !error,
+        error,
+        currentIp: hasCurrentIP ? data.currentIp.trim() : '-',
+        whitelist
+    };
+}
+
+function isAlreadyPinnedResponse(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    const message = String(data.message || '').trim();
+    return Number(data.code) === 403
+        && /^IP is already pinned to another slot\.?$/i.test(message);
+}
+
+function createAlreadyPinnedResult(root, args, item, groupName) {
+    const label = formatRequestLabel(groupName, item);
+    const previous = findPreviousRequestResult(root, args, item, label);
+    const hasPreviousData = hasUsableRequestData(previous);
+
+    return {
+        label,
+        slot: item.slot,
+        success: true,
+        statusText: '已存在',
+        detail: hasPreviousData
+            ? '当前 IP 已存在于其他 slot；当前 IP 和白名单沿用上一次成功结果'
+            : '当前 IP 已存在于其他 slot；API 未返回当前 IP 和白名单',
+        error: '',
+        currentIp: hasPreviousData && previous.currentIp ? previous.currentIp : '-',
+        whitelist: hasPreviousData && Array.isArray(previous.whitelist)
+            ? previous.whitelist
+            : []
+    };
+}
+
+function findPreviousRequestResult(root, args, item, label) {
+    const snapshot = readSnapshot(root, args);
+    if (!snapshot) return null;
+
+    const usableResults = collectUsableResults(snapshot);
+    const exact = usableResults.find(function(result) {
+        return result.label === label;
+    });
+    if (exact) return exact;
+
+    const equivalentLabels = getEquivalentRequestLabels(args, item.token);
+    const equivalent = usableResults.find(function(result) {
+        return equivalentLabels.includes(result.label);
+    });
+    if (equivalent) return equivalent;
+
+    const sameSlot = usableResults.find(function(result) {
+        return String(result.slot) === String(item.slot);
+    });
+    return sameSlot || usableResults[0] || null;
+}
+
+function getEquivalentRequestLabels(args, token) {
+    const labels = [];
+    [
+        { value: args.cellular_tokens, type: 'cellular', groupNames: ['蜂窝'] },
+        { value: args.wifi_tokens, type: 'wifi', groupNames: ['Wi-Fi', '非蜂窝'] }
+    ].forEach(function(group) {
+        parseTokenList(group.value, group.type).forEach(function(item) {
+            if (item.valid && item.token === token) {
+                group.groupNames.forEach(function(groupName) {
+                    labels.push(formatRequestLabel(groupName, item));
+                });
+            }
+        });
+    });
+    return labels;
+}
+
+function hasUsableRequestData(result) {
+    return Boolean(result) && (
+        (result.currentIp && result.currentIp !== '-')
+        || (Array.isArray(result.whitelist) && result.whitelist.length > 0)
+    );
+}
+
+function createRequestFailure(item, groupName, error) {
+    return {
+        label: formatRequestLabel(groupName, item),
+        slot: item.slot,
+        success: false,
+        error: getErrorMessage(error),
+        currentIp: '-',
+        whitelist: []
+    };
+}
+
+function formatRequestLabel(groupName, item) {
+    return `${groupName} #${item.index}（slot ${item.slot}）`;
+}
+
+function normalizeWhitelist(whitelist) {
+    return whitelist.map(function(entry) {
+        const value = entry && typeof entry === 'object' ? entry : {};
+        return {
+            slot: value.slot === null || typeof value.slot === 'undefined'
+                ? '?'
+                : String(value.slot),
+            ip: value.ip === null || typeof value.ip === 'undefined' || value.ip === ''
+                ? '-'
+                : String(value.ip)
+        };
+    }).sort(function(left, right) {
+        const leftSlot = Number(left.slot);
+        const rightSlot = Number(right.slot);
+        if (Number.isFinite(leftSlot) && Number.isFinite(rightSlot)) return leftSlot - rightSlot;
+        return String(left.slot).localeCompare(String(right.slot));
+    });
+}
+
+function sanitizeRequestError(error, token) {
+    let message = getErrorMessage(error);
+    if (token) {
+        const secrets = Array.from(new Set([
+            String(token),
+            encodeURIComponent(String(token))
+        ])).filter(Boolean).sort(function(left, right) {
+            return right.length - left.length;
+        });
+        secrets.forEach(function(secret) {
+            message = message.split(secret).join('***');
+        });
+    }
+    return truncateMessage(message);
+}
+
+function sanitizeAllTokens(value, args) {
+    let message = getErrorMessage(value);
+    collectRawTokens(args).forEach(function(token) {
+        message = sanitizeRequestError(message, token);
+    });
+    return truncateMessage(message);
+}
+
+function collectRawTokens(args) {
+    const tokens = [];
+    [args.cellular_tokens, args.wifi_tokens].forEach(function(value) {
+        String(value || '').split('|').forEach(function(part) {
+            const trimmed = part.trim();
+            const separator = trimmed.lastIndexOf('@');
+            const token = separator >= 0 ? trimmed.substring(0, separator).trim() : '';
+            if (token && !tokens.includes(token)) tokens.push(token);
+        });
+    });
+    return tokens;
+}
+
+function formatServerError(value) {
+    let text;
+    if (typeof value === 'string') {
+        text = value;
+    } else {
+        try {
+            text = JSON.stringify(value);
+        } catch (error) {
+            text = String(value);
+        }
+    }
+    return truncateMessage(String(text || 'API 返回失败').replace(/\s+/g, ' ').trim());
+}
+
+function truncateMessage(value) {
+    const text = String(value || '');
+    return text.length > 200 ? `${text.substring(0, 197)}...` : text;
+}
+
+// ============================================================
+// 持久化
+// ============================================================
+
+function createSnapshot(options) {
+    return {
+        version: 3,
+        status: options.status,
+        summary: options.summary,
+        style: options.style,
+        network: options.network,
+        trigger: options.trigger,
+        note: options.note || '',
+        results: options.results || [],
+        lastRequestResults: options.lastRequestResults || [],
+        lastRequestUpdatedAt: Number(options.lastRequestUpdatedAt || 0),
+        lastUsableResults: options.lastUsableResults || [],
+        updatedAt: Date.now()
+    };
+}
+
+function createEmptySnapshot(root) {
+    return {
+        version: 3,
+        status: 'empty',
+        summary: '暂无',
+        style: 'info',
+        network: getNetworkInfo(root),
+        trigger: 'tile',
+        note: '等待定时任务，或点击 Tile 刷新按钮手动更新',
+        results: [],
+        lastRequestResults: [],
+        lastRequestUpdatedAt: 0,
+        lastUsableResults: [],
+        updatedAt: 0
+    };
+}
+
+function createSkippedSnapshot(root, args, network, trigger) {
+    const previous = readSnapshot(root, args);
+    const note = `SSID ${network.ssid} 命中 skip_ssids，已跳过`;
+    const previousRequest = getPreviousRequestDisplay(previous);
+
+    if (!previousRequest) {
+        return createSnapshot({
+            status: 'success',
+            summary: '成功',
+            style: 'info',
+            network,
+            trigger,
+            note: `${note}；暂无上一次请求结果`,
+            results: []
+        });
+    }
+
+    return Object.assign({}, previous, {
+        network,
+        trigger,
+        note: `${note}；请求结果沿用上一次`,
+        results: previousRequest.results,
+        updatedAt: previousRequest.updatedAt
+    });
+}
+
+function createFailureSnapshot(root, args, error, trigger) {
+    return createSnapshot({
+        status: 'failure',
+        summary: '失败',
+        style: 'error',
+        network: getNetworkInfo(root),
+        trigger: trigger || 'update',
+        note: `参数或运行错误: ${sanitizeAllTokens(error, args)}`,
+        results: []
+    });
+}
+
+function readSnapshot(root, args) {
+    try {
+        const store = root && root.$persistentStore;
+        if (!store || typeof store.read !== 'function') return null;
+        const raw = store.read(getStoreKey(args));
+        if (!raw) return null;
+        const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return value && typeof value === 'object' ? value : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeSnapshot(root, args, snapshot) {
+    try {
+        const store = root && root.$persistentStore;
+        if (!store || typeof store.write !== 'function') return false;
+
+        const previous = readSnapshot(root, args);
+        const currentResults = Array.isArray(snapshot.results) ? snapshot.results : [];
+        const previousRequest = getPreviousRequestDisplay(previous);
+        snapshot.version = 3;
+
+        if (currentResults.length > 0) {
+            snapshot.lastRequestResults = copyRequestResults(currentResults, args);
+            snapshot.lastRequestUpdatedAt = Number(snapshot.updatedAt || Date.now());
+        } else {
+            snapshot.lastRequestResults = previousRequest
+                ? copyRequestResults(previousRequest.results, args)
+                : [];
+            snapshot.lastRequestUpdatedAt = previousRequest ? previousRequest.updatedAt : 0;
+        }
+
+        snapshot.lastUsableResults = mergeUsableResultHistory(snapshot, previous, args);
+        const safeSnapshot = sanitizeSnapshotForStorage(snapshot, args);
+        const saved = store.write(JSON.stringify(safeSnapshot), getStoreKey(args));
+        if (saved === false) {
+            log(root, `[${SCRIPT_NAME}] 保存状态失败: persistentStore.write 返回 false`);
+        }
+        return saved !== false;
+    } catch (error) {
+        log(root, `[${SCRIPT_NAME}] 保存状态失败: ${sanitizeAllTokens(error, args)}`);
+        return false;
+    }
+}
+
+function sanitizeSnapshotForStorage(snapshot, args) {
+    const value = snapshot && typeof snapshot === 'object' ? snapshot : {};
+    return {
+        version: 3,
+        status: String(value.status || 'failure'),
+        summary: sanitizeAllTokens(value.summary || '失败', args),
+        style: String(value.style || 'error'),
+        network: copyNetworkInfo(value.network),
+        trigger: String(value.trigger || 'update'),
+        note: sanitizeAllTokens(value.note || '', args),
+        results: copyRequestResults(value.results, args),
+        lastRequestResults: copyRequestResults(value.lastRequestResults, args),
+        lastRequestUpdatedAt: Number(value.lastRequestUpdatedAt || 0),
+        lastUsableResults: copyRequestResults(value.lastUsableResults, args),
+        updatedAt: Number(value.updatedAt || 0)
+    };
+}
+
+function copyNetworkInfo(network) {
+    const value = network && typeof network === 'object' ? network : {};
+    return {
+        type: value.type === 'cellular' ? 'cellular' : 'wifi',
+        ssid: value.ssid ? String(value.ssid) : '',
+        interfaces: Array.isArray(value.interfaces)
+            ? value.interfaces.map(function(item) { return String(item); })
+            : [],
+        label: value.label ? String(value.label) : '未知网络'
+    };
+}
+
+function getPreviousRequestDisplay(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    const current = Array.isArray(snapshot.results) ? snapshot.results : [];
+    if (current.length > 0) {
+        return {
+            results: copyRequestResults(current, {}),
+            updatedAt: Number(snapshot.updatedAt || 0)
+        };
+    }
+
+    const stored = Array.isArray(snapshot.lastRequestResults)
+        ? snapshot.lastRequestResults
+        : [];
+    if (!stored.length) return null;
+    return {
+        results: copyRequestResults(stored, {}),
+        updatedAt: Number(snapshot.lastRequestUpdatedAt || snapshot.updatedAt || 0)
+    };
+}
+
+function copyRequestResults(results, args) {
+    return (Array.isArray(results) ? results : []).map(function(result) {
+        const value = result && typeof result === 'object' ? result : {};
+        return {
+            label: sanitizeAllTokens(value.label || '', args || {}),
+            slot: value.slot === null || typeof value.slot === 'undefined'
+                ? '?'
+                : String(value.slot),
+            success: Boolean(value.success),
+            statusText: sanitizeAllTokens(value.statusText || '', args || {}),
+            detail: sanitizeAllTokens(value.detail || '', args || {}),
+            error: sanitizeAllTokens(value.error || '', args || {}),
+            currentIp: value.currentIp ? String(value.currentIp) : '-',
+            whitelist: Array.isArray(value.whitelist)
+                ? value.whitelist.map(function(entry) {
+                    return {
+                        slot: entry && entry.slot !== null && typeof entry.slot !== 'undefined'
+                            ? String(entry.slot)
+                            : '?',
+                        ip: entry && entry.ip ? String(entry.ip) : '-'
+                    };
+                })
+                : []
+        };
+    });
+}
+
+function collectUsableResults(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return [];
+    const current = Array.isArray(snapshot.results) ? snapshot.results : [];
+    const history = Array.isArray(snapshot.lastUsableResults)
+        ? snapshot.lastUsableResults
+        : [];
+    return current.filter(function(result) {
+        return result && result.success && hasUsableRequestData(result);
+    }).concat(history.filter(hasUsableRequestData));
+}
+
+function mergeUsableResultHistory(snapshot, previous, args) {
+    const current = Array.isArray(snapshot.results)
+        ? snapshot.results.filter(function(result) {
+            return result && result.success && hasUsableRequestData(result);
+        })
+        : [];
+    const previousResults = collectUsableResults(previous);
+    const merged = [];
+    const seen = new Set();
+
+    current.concat(previousResults).forEach(function(result) {
+        const key = getHistoryResultKey(result);
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push({
+            label: result.label || '',
+            slot: result.slot === null || typeof result.slot === 'undefined'
+                ? '?'
+                : String(result.slot),
+            success: true,
+            statusText: result.statusText || '成功',
+            detail: result.detail || '',
+            error: '',
+            currentIp: result.currentIp || '-',
+            whitelist: Array.isArray(result.whitelist) ? result.whitelist : []
+        });
+    });
+
+    return copyRequestResults(merged.slice(0, 50), args);
+}
+
+function getHistoryResultKey(result) {
+    const label = result && result.label ? String(result.label) : '';
+    const slot = result && result.slot !== null && typeof result.slot !== 'undefined'
+        ? String(result.slot)
+        : '?';
+    return `${label}|${slot}`;
+}
+
+function getStoreKey(args) {
+    const value = args && typeof args === 'object' ? args : {};
+    const scope = [
+        String(value.host || DEFAULT_HOST)
+            .trim()
+            .replace(/^https?:\/\//i, '')
+            .replace(/\/+$/, '')
+            .toLowerCase(),
+        String(value.cellular_tokens || ''),
+        String(value.wifi_tokens || ''),
+        String(value.skip_ssids || '')
+    ].join('|');
+    return `${STORE_PREFIX}:${hashString(scope)}:snapshot`;
+}
+
+function hashString(value) {
+    let hash = 0;
+    const text = String(value || '');
+    for (let index = 0; index < text.length; index++) {
+        hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+    }
+    return (hash >>> 0).toString(36);
+}
+
+// ============================================================
+// Tile 与通知
+// ============================================================
+
+function renderTile(snapshot) {
+    const style = snapshot.style || 'info';
+    const backgroundColor = style === 'good'
+        ? '#2D6A4F'
+        : (style === 'alert'
+            ? '#9A6700'
+            : (style === 'error' ? '#9D2A2A' : '#2B5C8A'));
+
+    return {
+        title: `PO0W 防火墙白名单 · ${snapshot.summary || '失败'}`,
+        content: formatTileContent(snapshot),
+        icon: 'shield.lefthalf.filled',
+        backgroundColor
+    };
+}
+
+function formatTileContent(snapshot) {
+    const lines = [
+        `API 请求结果: ${snapshot.summary || '失败'}`,
+        `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
+        `触发方式: ${formatTrigger(snapshot.trigger)}`,
+        `更新时间: ${formatDate(snapshot.updatedAt)}`
+    ];
+
+    if (snapshot.note) lines.push(`说明: ${snapshot.note}`);
+
+    (snapshot.results || []).forEach(function(result) {
+        lines.push('');
+        lines.push(`【${result.label}】`);
+        lines.push(`请求结果: ${result.statusText || (result.success ? '成功' : '失败')}`);
+        if (result.detail) lines.push(`说明: ${result.detail}`);
+        if (result.error) lines.push(`错误: ${result.error}`);
+        lines.push(`当前 IP: ${result.currentIp || '-'}`);
+        lines.push('白名单:');
+        if (result.whitelist && result.whitelist.length) {
+            result.whitelist.forEach(function(entry) {
+                lines.push(`  ${entry.slot}: ${entry.ip}`);
+            });
+        } else {
+            lines.push('  （空）');
+        }
+    });
+    return lines.join('\n');
+}
+
+function formatTrigger(trigger) {
+    if (trigger === 'cron') return '定时任务';
+    if (trigger === 'manual') return 'Tile 手动更新';
+    if (trigger === 'tile') return 'Tile 状态读取';
+    return '自动更新';
+}
+
+function notifyManualResult(root, snapshot) {
+    try {
+        const notification = root && root.$notification;
+        if (!notification || typeof notification.post !== 'function') return;
+        const requestLines = (snapshot.results || []).slice(0, 5).map(function(result) {
+            return `${result.label}: ${result.statusText || (result.success ? '成功' : '失败')}`;
+        });
+        const body = [
+            snapshot.network && snapshot.network.label ? snapshot.network.label : '未知网络',
+            snapshot.note || '',
+            requestLines.join('\n')
+        ].filter(Boolean).join('\n');
+        notification.post(
+            `PO0W 白名单 · ${snapshot.summary || '失败'}`,
+            '',
+            body
+        );
+    } catch (error) { /* noop */ }
+}
+
+function finishTile(root, result) {
+    finish(root, {
+        title: result.title,
+        content: result.content,
+        icon: result.icon,
+        backgroundColor: result.backgroundColor
+    });
+}
+
+function finish(root, value) {
+    try {
+        if (root && typeof root.$done === 'function') root.$done(value);
+    } catch (error) { /* noop */ }
+}
+
+function formatDate(value) {
+    if (!value) return '-';
+    const date = new Date(Number(value));
+    if (Number.isNaN(date.getTime())) return '-';
+    const pad = function(number) { return String(number).padStart(2, '0'); };
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function log(root, message) {
+    try {
+        const logger = root && root.console ? root.console : console;
+        if (logger && typeof logger.log === 'function') logger.log(String(message));
+    } catch (error) { /* noop */ }
+}
+
+function getErrorMessage(error) {
+    return String(error && error.message ? error.message : error);
+}
+
+function getGlobalRoot() {
+    if (typeof globalThis !== 'undefined') return globalThis;
+    return Function('return this')();
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        start,
+        runUpdate,
+        parseArgs,
+        buildConfig,
+        normalizeHost,
+        parseTokenList,
+        parseList,
+        detectMode,
+        detectUpdateTrigger,
+        getNetworkInfo,
+        getPrimaryInterfaces,
+        isCellularInterface,
+        parseResponseJSON,
+        createRequestResult,
+        isAlreadyPinnedResponse,
+        normalizeWhitelist,
+        renderTile,
+        formatTileContent,
+        hashString,
+        getStoreKey
+    };
+}
+
+const AUTO_ROOT = getGlobalRoot();
+if (AUTO_ROOT && typeof AUTO_ROOT.$done === 'function') {
+    start(AUTO_ROOT);
+}

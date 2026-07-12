@@ -1,0 +1,30 @@
+name: PO0W 防火墙白名单
+desc: 每 30 分钟根据当前蜂窝或非蜂窝网络更新防火墙白名单，并提供 Tile 状态展示与手动刷新。
+
+# Stash 官方脚本覆写目前只提供 cron.script、tiles 与 script-providers，
+# 没有网络变化脚本类型，因此此版本使用每 30 分钟定时更新作为自动触发。
+# 导入后请同时替换 cron 与 tiles 中的示例参数。
+# cellular_tokens 和 wifi_tokens 至少填写一组；多个 token@slot_id 使用竖线分隔。
+# skip_ssids 仅影响定时更新；点击 Tile 手动刷新时会忽略该配置。
+# Stash 官方未公开主接口字段；脚本仅在兼容字段明确匹配 pdp_ip* 时判蜂窝，
+# 无法取得接口时严格按非蜂窝处理并使用 wifi_tokens。
+
+cron:
+  script:
+    - name: po0w-firewall
+      cron: '*/30 * * * *'
+      argument: 'mode=update&trigger=cron&host=124.221.69.228&cellular_tokens=token1@3|token2@4&wifi_tokens=token3@5&skip_ssids=Home|Office'
+      timeout: 30
+
+tiles:
+  - name: po0w-firewall
+    argument: 'mode=tile&trigger=tile&host=124.221.69.228&cellular_tokens=token1@3|token2@4&wifi_tokens=token3@5&skip_ssids=Home|Office'
+    title: PO0W 防火墙白名单
+    content: 等待刷新
+    icon: shield.fill
+    backgroundColor: '#2B5C8A'
+
+script-providers:
+  po0w-firewall:
+    url: https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/stash/po0w.js
+    interval: 86400

@@ -2,31 +2,34 @@
 
 通过客户端当前的公网出口 IP 调用防火墙 API，自动维护目标服务器的访问白名单。
 
-目前支持 **Surge iOS、Surge macOS** 和 **Egern**，后续将逐步支持其他客户端。
+目前支持 **Surge iOS、Surge macOS、Egern、Stash、Loon** 和 **Quantumult X**，后续将逐步支持其他客户端。
 
 ## 客户端支持
 
 | 客户端 | 状态 | 配置文件 |
 | --- | --- | --- |
 | Surge iOS | 已支持 | [`surge/po0w.sgmodule`](surge/po0w.sgmodule) |
-| Surge macOS | 已支持 | [`surge/po0w-mac.sgmodule`](surge/po0w-mac.sgmodule) |
+| Surge macOS | 测试中 | [`surge/po0w.sgmodule`](surge/po0w.sgmodule) |
 | Egern | 已支持 | [`egern/po0w.yaml`](egern/po0w.yaml) |
+| Stash | 已支持 | [`stash/po0w.stoverride`](stash/po0w.stoverride) |
+| Loon | 已支持 | [`loon/po0w.plugin`](loon/po0w.plugin) |
+| Quantumult X | 已支持 | [`quanx/po0w.conf`](quanx/po0w.conf) |
 | 其他客户端 | 计划中 | - |
 
 ## 功能
 
-- 系统网络发生变化时自动更新白名单。
+- Surge、Egern、Loon 与 Quantumult X 可在系统网络发生变化时自动更新白名单；Stash 当前不提供网络变化脚本类型。
 - 每小时的第 0、30 分钟执行一次定时更新，用于托底。
 - 根据当前网络环境自动选择蜂窝或非蜂窝 token 组；Wi-Fi、有线网卡及其他接口均属于非蜂窝。
 - 支持一个网络配置多个 `token@slot_id`，并汇总展示全部请求结果。
 - 支持指定自动更新时需要跳过的 Wi-Fi SSID。
-- Surge iOS 可点击 Panel 刷新按钮立即更新；Surge Mac 与 Egern 提供独立的手动更新脚本。
+- Surge iOS 可点击 Panel 刷新按钮立即更新；Stash 可点击 Tile 手动刷新；Egern、Loon 与 Quantumult X 提供独立的手动更新脚本。
 - 所有白名单 API 请求强制使用客户端的 `DIRECT` 策略。
-- Surge iOS Panel 与 Egern Widget 展示成功、失败或部分失败，以及当前 IP 和完整白名单。
+- Surge iOS Panel、Stash Tile 与 Egern Widget 展示成功、失败或部分失败，以及当前 IP 和完整白名单；Loon 通过“查看最近结果”通知、Quantumult X 通过“查看状态”UIAction 展示。
 
 ## 安装
 
-### Surge iOS
+### Surge iOS / macOS
 
 在 Surge 中使用以下地址安装模块：
 
@@ -34,17 +37,7 @@
 https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.sgmodule
 ```
 
-安装后编辑模块参数，将示例 token 替换为实际值。
-
-### Surge macOS
-
-Surge Mac 5.5.0 及以上版本使用独立的参数表格式，请安装：
-
-```text
-https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w-mac.sgmodule
-```
-
-安装后填写 `WIFI_TOKENS`。Mac 的 Wi-Fi、有线网卡及其他网络均使用该 token 组；需要立即更新时，在脚本列表中运行“PO0W 手动更新”。Surge Mac 不提供 Information Panel，手动结果通过系统通知和脚本日志返回。
+安装后编辑模块参数，将示例 token 替换为实际值。Surge Mac 使用同一个模块，Wi-Fi、有线网卡及其他网络均使用 `wifi_tokens`；Mac 不支持 Information Panel，当前先验证网络变化与 30 分钟定时更新功能。
 
 ### Egern
 
@@ -56,13 +49,55 @@ https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/egern/po0w.yaml
 
 安装后在模块的 Env 区域填写参数。界面中的 token 和 SSID 示例只是输入提示，必须替换为实际配置。需要立即更新时，在 Egern 脚本列表中运行“PO0 手动更新”；“PO0 状态”Widget 只负责读取并展示最近结果，不会自动调用 API。
 
+### Stash
+
+在 Stash 中使用以下地址安装覆写：
+
+```text
+https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/stash/po0w.stoverride
+```
+
+Stash 覆写没有交互式参数表。安装前或导入后，请同时编辑 `cron.script` 与 `tiles` 中的 `argument`，将示例 token 和 SSID 替换为实际配置，并确保两处参数完全一致。支持 `$trigger` 的版本会让 Tile 的非按钮刷新只读取最近结果，点击刷新按钮时按当前网络选择 token、忽略 `skip_ssids` 并立即更新；如果运行环境没有提供 `$trigger`，Tile 执行会安全降级为手动更新。
+
+Stash 官方脚本覆写当前没有网络变化脚本类型，因此无法在网络切换瞬间自动触发。本实现使用每小时第 0、30 分钟的定时任务自动更新，并由 Tile 提供手动刷新入口；定时任务依赖 Stash 的 Network Extension（VPN）处于已连接状态。
+
+Stash 官方脚本文档目前也没有公开 `$network` 字段。本实现会防御性读取兼容对象中的 `v4/v6.primaryInterface` 与 Wi-Fi SSID；只有取得的全部主接口都匹配 `pdp_ip*` 才使用蜂窝 token，字段缺失时按非蜂窝处理。建议首次安装后分别在蜂窝与 Wi-Fi 下点击 Tile，确认其中显示的网络分类符合设备实际情况。
+
+### Loon
+
+在 Loon 中使用以下地址安装插件：
+
+```text
+https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/loon/po0w.plugin
+```
+
+安装后在插件参数中填写 `host`、`cellular_tokens`、`wifi_tokens` 和 `skip_ssids`。Loon 的“PO0W 手动更新”会忽略 `skip_ssids` 并立即调用 API；“PO0W 查看最近结果”只读取共享快照，通过通知展示上一次请求的网络环境、当前 IP、白名单和每个请求的结果。
+
+Loon 官方 Script API 目前没有提供主接口信息。本实现仍会防御性读取兼容的 `$network.v4/v6.primaryInterface`，但只有确实取得且全部匹配 `pdp_ip*` 时才判定为蜂窝；接口字段缺失时严格按非蜂窝处理并使用 `wifi_tokens`。因此首次安装后应分别在蜂窝、Wi-Fi 和外接网卡下运行“PO0W 手动更新”，根据通知中的网络分类确认当前 Loon 版本是否提供兼容字段。
+
+Loon 只会执行整个配置中排在最前面的一个 `network-changed` 脚本。如果同时安装了其他包含该脚本类型的插件，只有最靠前的插件能在网络切换时立即运行；PO0W 的 30 分钟定时任务和两个手动脚本不受此限制。
+
+### Quantumult X
+
+使用以下地址获取 Quantumult X 配置片段：
+
+```text
+https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/quanx/po0w.conf
+```
+
+将文件中的 `[task_local]` 内容合并到 Quantumult X 配置。Quantumult X 没有交互式参数表，请同步编辑四条任务 URL 的 `#` fragment，将示例 token 和 SSID 替换为实际配置并保持四处参数一致；参数包含 `&`、`#` 等 URL 保留字符时需要先编码。
+
+“PO0W 手动更新”UIAction 会忽略 `skip_ssids` 并立即调用 API；“PO0W 查看状态”只读取共享快照，通过 Quantumult X 的交互结果页展示最近一次请求。`event-network`、定时任务和 UIAction 都依赖 Quantumult X Tunnel 处于运行状态。
+
+Quantumult X 没有公开 Surge 式主接口字段。本实现优先将非空 SSID 判为非蜂窝；当该字段是本地 IPv4/IPv6 地址时按有线网络处理且不参与 `skip_ssids` 匹配；SSID 为空时，仅在 `$environment.cellular` 返回明确的当前蜂窝信息时判为蜂窝，否则归入非蜂窝。建议首次安装后分别在蜂窝、Wi-Fi 和外接网卡下运行“PO0W 手动更新”，确认交互结果中的网络分类。
+
 ## 参数
 
 | 参数 | 是否必填 | 说明 |
 | --- | --- | --- |
 | `host` | 否 | API 主机的 IP 地址或域名，默认 `124.221.69.228`。不要填写路径 |
 | `cellular_tokens` | 二选一 | 蜂窝网络使用的 token，格式为 `token@slot_id` |
-| `wifi_tokens` | 二选一 | Wi-Fi、有线网卡及其他非蜂窝网络使用的 token，格式为 `token@slot_id`；Surge Mac 中对应 `WIFI_TOKENS` |
+| `wifi_tokens` | 二选一 | Wi-Fi、有线网卡及其他非蜂窝网络使用的 token，格式为 `token@slot_id`；Loon 或 Quantumult X 无法确认蜂窝时也使用此组 |
 | `skip_ssids` | 否 | 自动更新时需要跳过的 Wi-Fi SSID，多个 SSID 使用竖线分隔 |
 
 `cellular_tokens` 和 `wifi_tokens` 不能同时为空。每组可以配置多个 token，使用 `|` 分隔：
@@ -85,15 +120,17 @@ skip_ssids=Home|Office
 | 30 分钟定时任务 | 蜂窝 | `cellular_tokens` | 不适用 |
 | 30 分钟定时任务 | Wi-Fi | `wifi_tokens` | 匹配时跳过 |
 | 30 分钟定时任务 | 有线或其他非蜂窝 | `wifi_tokens` | 不适用 |
-| Surge iOS Panel / Surge Mac 与 Egern 手动脚本 | 蜂窝 | `cellular_tokens` | 不适用 |
-| Surge iOS Panel / Surge Mac 与 Egern 手动脚本 | Wi-Fi | `wifi_tokens` | 忽略匹配并强制更新 |
-| Surge iOS Panel / Surge Mac 与 Egern 手动脚本 | 有线或其他非蜂窝 | `wifi_tokens` | 不适用 |
+| Surge iOS Panel / Stash Tile / Egern、Loon 与 Quantumult X 手动脚本 | 蜂窝 | `cellular_tokens` | 不适用 |
+| Surge iOS Panel / Stash Tile / Egern、Loon 与 Quantumult X 手动脚本 | Wi-Fi | `wifi_tokens` | 忽略匹配并强制更新 |
+| Surge iOS Panel / Stash Tile / Egern、Loon 与 Quantumult X 手动脚本 | 有线或其他非蜂窝 | `wifi_tokens` | 不适用 |
 
-命中 `skip_ssids` 并自动跳过时，Surge iOS Panel / Egern Widget 会继续展示上一次请求的状态、当前 IP、白名单和结果时间，不会用空结果覆盖。
+表中的“网络变化”触发适用于 Surge、Egern、Loon 与 Quantumult X。Stash 使用 30 分钟定时任务和 Tile 手动刷新，不会在网络切换瞬间执行脚本；Loon 还受“整个配置只执行第一个 `network-changed` 脚本”的限制。
 
-脚本仅在所有已知主接口都匹配 iOS 蜂窝接口 `pdp_ip*` 时判定为蜂窝；其他接口、接口不一致或接口信息缺失时均按非蜂窝处理。`skip_ssids` 只在确实取得 Wi-Fi SSID 时生效。
+命中 `skip_ssids` 并自动跳过时，Surge iOS Panel / Stash Tile / Egern Widget / Loon 与 Quantumult X 最近结果会继续展示上一次请求的状态、当前 IP、白名单和结果时间，不会用空结果覆盖。
 
-Surge iOS Panel 的自动刷新和 Egern 状态 Widget 都只读取本地保存的最近结果，不会调用白名单 API。手动请求需要点击 Surge iOS Panel 刷新按钮，或运行 Surge Mac 的“PO0W 手动更新”及 Egern 的“PO0 手动更新”脚本。
+除 Quantumult X 外，脚本仅在所有已知主接口都匹配 iOS 蜂窝接口 `pdp_ip*` 时判定为蜂窝；其他接口、接口不一致或接口信息缺失时均按非蜂窝处理。Quantumult X 在没有主接口字段时使用其原生 `$environment.cellular` 作为正向蜂窝信号，具体限制见安装章节。`skip_ssids` 只在确实取得 Wi-Fi SSID 时生效。
+
+Surge iOS Panel 的自动刷新、Stash Tile 的非点击刷新、Egern 状态 Widget、Loon 的“PO0W 查看最近结果”和 Quantumult X 的“PO0W 查看状态”都只读取本地保存的最近结果，不会调用白名单 API。手动请求需要点击 Surge iOS Panel 刷新按钮或 Stash Tile，或运行 Loon、Quantumult X 的“PO0W 手动更新”及 Egern 的“PO0 手动更新”脚本。
 
 ## API 请求
 
@@ -111,9 +148,9 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 
 如果 API 返回 `{"code":403,"message":"IP is already pinned to another slot."}`，脚本会将该请求显示为“已存在”，不计入失败。因为当前 IP 已经处于白名单的其他 slot，无需重复添加；如果本地保存有该请求的上一次 IP 和白名单，则继续沿用展示。
 
-## Panel / Widget 展示
+## Panel / Tile / Widget / 通知与交互展示
 
-Surge iOS Panel 和 Egern Widget 会展示最近一次请求的：
+Surge iOS Panel、Stash Tile、Egern Widget、Loon 最近结果通知，以及 Quantumult X 交互结果页会展示最近一次请求的：
 
 - API 请求结果和当时的网络环境。
 - 触发方式与结果时间。
@@ -134,11 +171,16 @@ Surge iOS Panel 和 Egern Widget 会展示最近一次请求的：
 
 ## 文件说明
 
-- [`surge/po0w.sgmodule`](surge/po0w.sgmodule)：Surge iOS 模块配置。
-- [`surge/po0w-mac.sgmodule`](surge/po0w-mac.sgmodule)：使用 Surge Mac 参数表格式的模块配置。
+- [`surge/po0w.sgmodule`](surge/po0w.sgmodule)：Surge iOS 与 macOS 共用模块配置。
 - [`surge/po0w.js`](surge/po0w.js)：网络判断、API 请求、结果聚合、Panel 与 Mac 手动通知脚本。
 - [`egern/po0w.yaml`](egern/po0w.yaml)：Egern 模块配置。
 - [`egern/po0w.js`](egern/po0w.js)：使用 Egern `ctx` API 的原生实现，不依赖 Surge 适配层。
+- [`stash/po0w.stoverride`](stash/po0w.stoverride)：Stash 覆写配置，提供 30 分钟定时任务和 Tile。
+- [`stash/po0w.js`](stash/po0w.js)：使用 Stash 脚本全局接口的原生实现，不依赖其他客户端适配层。
+- [`loon/po0w.plugin`](loon/po0w.plugin)：Loon 插件配置，提供网络变化、30 分钟定时、手动更新和查看结果脚本。
+- [`loon/po0w.js`](loon/po0w.js)：使用 Loon `$argument`、`$config`、`$httpClient` 等原生接口的实现。
+- [`quanx/po0w.conf`](quanx/po0w.conf)：Quantumult X `[task_local]` 配置片段，提供网络变化、30 分钟定时和两个 UIAction。
+- [`quanx/po0w.js`](quanx/po0w.js)：使用 Quantumult X `$environment`、`$task`、`$prefs` 与 `$done` 的原生实现。
 
 ## 后续计划
 

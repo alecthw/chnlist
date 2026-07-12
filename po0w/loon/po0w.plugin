@@ -1,0 +1,27 @@
+#!name=PO0 防火墙白名单
+#!desc=根据当前蜂窝或非蜂窝网络更新 PO0 防火墙白名单；支持网络变化、每 30 分钟定时更新、手动更新和查看最近结果。
+#!author=alecthw
+#!homepage=https://github.com/alecthw/chnlist
+#!icon=shield.lefthalf.filled
+#!system=iOS,iPadOS,macOS
+#!loon_version=3.2.1(733)
+
+[Argument]
+host = input,"124.221.69.228",tag=API 主机,desc=填写 IP 地址或域名，可包含端口，不要填写协议或路径
+cellular_tokens = input,"",tag=蜂窝 Tokens,desc=格式 token@slot_id，多个用竖线分隔；与非蜂窝 Tokens 至少填写一组
+wifi_tokens = input,"",tag=非蜂窝 Tokens,desc=Wi-Fi、有线及接口未知时使用，格式 token@slot_id，多个用竖线分隔
+skip_ssids = input,"",tag=跳过 SSID,desc=自动触发时不更新的 Wi-Fi SSID，多个用竖线分隔；手动更新会忽略此项
+
+# Loon 只会运行整个配置中排在最前面的一个 network-changed 脚本；
+# 如果其他插件排在 PO0W 前面，仍可依靠定时任务和手动更新。
+# Loon 官方未公开主接口字段；脚本仅在兼容字段明确匹配 pdp_ip* 时判蜂窝，
+# 无法取得接口时严格按非蜂窝处理并使用 wifi_tokens。
+
+[script]
+network-changed script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/loon/po0w.js,tag=PO0W 网络变化,timeout=30,argument=[{host},{cellular_tokens},{wifi_tokens},{skip_ssids}],enable=true
+
+cron "*/30 * * * *" script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/loon/po0w.js,tag=PO0W 定时更新,timeout=30,argument=[{host},{cellular_tokens},{wifi_tokens},{skip_ssids}],enable=true
+
+generic script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/loon/po0w.js,tag=PO0W 手动更新,timeout=30,img-url=shield.lefthalf.filled.system,argument=[{host},{cellular_tokens},{wifi_tokens},{skip_ssids}],enable=true
+
+generic script-path=https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/loon/po0w.js,tag=PO0W 查看最近结果,timeout=10,img-url=list.bullet.rectangle.system,argument=[{host},{cellular_tokens},{wifi_tokens},{skip_ssids}],enable=true
