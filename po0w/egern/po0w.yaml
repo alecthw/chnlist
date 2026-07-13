@@ -22,6 +22,10 @@ env_schema:
     name: 跳过 SSID
     description: 网络变化和定时任务在这些 Wi-Fi 下不更新；手动更新会忽略此项
     default_value: Home|Office
+  cache_diff:
+    name: 缓存比较
+    description: true 时公网 IP 与 slot 缓存一致则跳过写入；false 时直接写入。公网 IP 始终查询
+    default_value: true
 
 scriptings:
   - network:
@@ -35,6 +39,7 @@ scriptings:
         cellular_tokens: ''
         wifi_tokens: ''
         skip_ssids: ''
+        cache_diff: ''
 
   - schedule:
       name: PO0 定时更新
@@ -48,6 +53,7 @@ scriptings:
         cellular_tokens: ''
         wifi_tokens: ''
         skip_ssids: ''
+        cache_diff: ''
 
   - generic:
       name: PO0 手动更新
@@ -60,6 +66,7 @@ scriptings:
         cellular_tokens: ''
         wifi_tokens: ''
         skip_ssids: ''
+        cache_diff: ''
 
   - generic:
       name: PO0 状态
@@ -72,6 +79,7 @@ scriptings:
         cellular_tokens: ''
         wifi_tokens: ''
         skip_ssids: ''
+        cache_diff: ''
 
 widgets:
   - name: PO0 状态
