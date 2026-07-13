@@ -4,12 +4,14 @@
 // - network-changed：按当前网络更新对应 token 组
 // - cron：每 30 分钟执行一次
 // - panel：点击刷新按钮手动更新；自动刷新只读取最近一轮结果
-// - manual：Surge Mac 从脚本列表手动更新
+// - 自动更新：先查询 DIRECT 公网 IP，与缓存中当前 slot 比较，相同则跳过写入 API
 // =============================================================
 
 const SCRIPT_NAME = 'PO0W';
 const DEFAULT_HOST = '124.221.69.228';
 const REQUEST_TIMEOUT = 10;
+const PUBLIC_IP_TIMEOUT = 4;
+const PUBLIC_IP_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 const STORE_PREFIX = 'po0w:firewall';
 const NETWORK_DEBUG = false;
 
@@ -55,6 +57,7 @@ async function runUpdate() {
     const groupName = network.type === 'wifi'
         ? (network.ssid ? 'Wi-Fi' : '非蜂窝')
         : '蜂窝';
+    const publicInfo = await getDirectInfo();
 
     if (!selected.length) {
         const snapshot = createSnapshot({
@@ -64,6 +67,7 @@ async function runUpdate() {
             network,
             trigger: cfg.trigger,
             note: `未配置 ${network.type === 'wifi' ? 'wifi_tokens' : 'cellular_tokens'}，无需请求`,
+            publicInfo,
             results: []
         });
         writeSnapshot(snapshot);
@@ -71,15 +75,34 @@ async function runUpdate() {
         return snapshot;
     }
 
+    const forceRefresh = isManualTrigger(cfg.trigger);
+    const previousSnapshot = readSnapshot();
+    const slotCache = readSlotCache();
     const tasks = selected.map(function (item) {
         if (!item.valid) {
-            return Promise.resolve(createRequestFailure(item, groupName, item.error));
+            return Promise.resolve(createRequestFailure(item, groupName, item.error, false));
+        }
+
+        const label = formatRequestLabel(groupName, item);
+        const previous = findSlotCacheResult(slotCache, item) ||
+            findPreviousRequestResultInSnapshot(previousSnapshot, item, label, false);
+        const cachedSlotIP = previous && previous.cacheComparable !== false
+            ? getWhitelistSlotIP(previous, item.slot)
+            : '';
+        if (cfg.cacheDiff && !forceRefresh && publicInfo.ip && isSameIPAddress(publicInfo.ip, cachedSlotIP)) {
+            return Promise.resolve(createCachedMatchResult(item, groupName, previous, publicInfo));
         }
         return requestWhitelist(cfg.host, item, groupName);
     });
     const results = await Promise.all(tasks);
+    updateSlotCacheFromResults(slotCache, selected, results);
     const successCount = results.filter(function (result) { return result.success; }).length;
     const failureCount = results.length - successCount;
+    const cacheHitCount = results.filter(function (result) { return result.cacheHit; }).length;
+    const apiRequestCount = results.filter(function (result) { return result.apiRequested; }).length;
+    const apiSuccessCount = results.filter(function (result) {
+        return result.apiRequested && result.success;
+    }).length;
     let status = 'success';
     let summary = '成功';
     let style = 'good';
@@ -94,13 +117,21 @@ async function runUpdate() {
         style = 'alert';
     }
 
+    const notes = [`${successCount}/${results.length} 项成功`];
+    if (forceRefresh) notes.push('强制刷新');
+    if (!cfg.cacheDiff && !forceRefresh) notes.push('缓存比较已关闭');
+    if (cacheHitCount) notes.push(`${cacheHitCount} 个槽位 IP 未变化，已跳过写入`);
+    if (apiRequestCount) notes.push(`${apiSuccessCount}/${apiRequestCount} 个写入请求成功`);
+    if (!publicInfo.ip) notes.push('公网 IP 查询失败，未进行缓存比较');
+
     const snapshot = createSnapshot({
         status,
         summary,
         style,
         network,
         trigger: cfg.trigger,
-        note: `${successCount}/${results.length} 个请求成功`,
+        note: notes.join('；'),
+        publicInfo,
         results
     });
     writeSnapshot(snapshot);
@@ -126,6 +157,8 @@ async function runPanel() {
                 content: [
                     'API 请求结果: 暂无',
                     `当前网络环境: ${network.label}`,
+                    '公网 IP: 暂无',
+                    '运营商: 暂无',
                     '点击刷新按钮可手动更新'
                 ].join('\n'),
                 style: 'info'
@@ -186,10 +219,19 @@ function buildConfig(args) {
         cellularTokens,
         wifiTokens,
         skipSSIDs: parseList(args.skip_ssids),
+        cacheDiff: parseBooleanArg(args.cache_diff, true),
         trigger: args.trigger === 'cron'
             ? 'cron'
             : (args.trigger === 'panel' ? 'panel' : (args.trigger === 'manual' ? 'manual' : 'event'))
     };
+}
+
+function parseBooleanArg(value, defaultValue) {
+    const text = cleanText(value).toLowerCase();
+    if (!text) return Boolean(defaultValue);
+    if (text === 'true') return true;
+    if (text === 'false') return false;
+    throw new Error('cache_diff 必须是 true 或 false');
 }
 
 function isManualTrigger(trigger) {
@@ -354,6 +396,196 @@ function getCurrentSSID(network) {
 }
 
 // ============================================================
+// DIRECT 公网 IP 与运营商查询
+// ============================================================
+
+async function getDirectInfo() {
+    const providers = [
+        {
+            name: '126',
+            url: 'https://ipservice.ws.126.net/locate/api/getLocByIp',
+            parse: parse126PublicInfo
+        },
+        {
+            name: 'BILI',
+            url: 'https://api.bilibili.com/x/web-interface/zone',
+            parse: parseBilibiliPublicInfo
+        },
+        {
+            name: 'IPIP',
+            url: 'https://myip.ipip.net/json',
+            parse: parseIPIPPublicInfo
+        }
+    ];
+    const errors = [];
+
+    for (let index = 0; index < providers.length; index++) {
+        const provider = providers[index];
+        try {
+            const data = await requestPublicInfo(provider.url);
+            const parsed = provider.parse(data);
+            if (!parsed || !isValidIPAddress(parsed.ip)) {
+                throw new Error('响应中缺少有效公网 IP');
+            }
+
+            const info = createPublicInfo({
+                ip: parsed.ip,
+                provider: provider.name,
+                country: parsed.country,
+                province: parsed.province,
+                city: parsed.city,
+                isp: parsed.isp
+            });
+            console.log(`[${SCRIPT_NAME}] 公网 IP: ${info.ip}（${info.provider}），运营商: ${info.carrier || '-'}`);
+            return info;
+        } catch (error) {
+            const message = getErrorMessage(error);
+            errors.push(`${provider.name}: ${message}`);
+            console.log(`[${SCRIPT_NAME}] ${provider.name} 公网 IP 查询失败: ${message}`);
+        }
+    }
+
+    return createPublicInfo({
+        error: errors.join('；') || '公网 IP 查询失败'
+    });
+}
+
+function requestPublicInfo(url) {
+    return new Promise(function (resolve, reject) {
+        $httpClient.get({
+            url,
+            headers: {
+                Accept: 'application/json',
+                'User-Agent': PUBLIC_IP_USER_AGENT
+            },
+            timeout: PUBLIC_IP_TIMEOUT,
+            policy: 'DIRECT'
+        }, function (error, response, body) {
+            if (error) {
+                reject(new Error(getErrorMessage(error)));
+                return;
+            }
+
+            const status = response && Number(response.status || response.statusCode || 0);
+            if (status < 200 || status >= 300) {
+                reject(new Error(`HTTP ${status || '未知状态'}`));
+                return;
+            }
+
+            try {
+                const data = JSON.parse(String(body || ''));
+                resolve(data);
+            } catch (parseError) {
+                reject(new Error('响应不是有效 JSON'));
+            }
+        });
+    });
+}
+
+function parse126PublicInfo(body) {
+    const result = body && typeof body === 'object' ? body.result || {} : {};
+    return {
+        ip: result.ip,
+        country: result.country,
+        province: result.province,
+        city: result.city,
+        isp: result.operator || result.company
+    };
+}
+
+function parseBilibiliPublicInfo(body) {
+    const data = body && typeof body === 'object' ? body.data || {} : {};
+    return {
+        ip: data.addr,
+        country: data.country,
+        province: data.province,
+        city: data.city,
+        isp: data.isp
+    };
+}
+
+function parseIPIPPublicInfo(body) {
+    const data = body && typeof body === 'object' ? body.data || {} : {};
+    const location = Array.isArray(data.location) ? data.location : [];
+    return {
+        ip: data.ip,
+        country: location[0],
+        province: location[1],
+        city: location[2],
+        isp: location[4]
+    };
+}
+
+function createPublicInfo(options) {
+    const value = options || {};
+    const country = cleanText(value.country);
+    const province = normalizeLocationPart(value.province);
+    const city = normalizeLocationPart(value.city);
+    const isp = normalizeISP(value.isp);
+    return {
+        ip: cleanText(value.ip),
+        provider: cleanText(value.provider),
+        country,
+        province,
+        city,
+        isp,
+        carrier: formatCarrierLabel(province, city, isp),
+        error: cleanText(value.error)
+    };
+}
+
+function formatCarrierLabel(province, city, isp) {
+    const normalizedProvince = normalizeLocationPart(province);
+    const normalizedCity = normalizeLocationPart(city);
+    const normalizedISP = normalizeISP(isp);
+    let location = normalizedProvince;
+
+    if (normalizedCity && normalizedCity !== normalizedProvince) {
+        location += normalizedCity;
+    } else if (!location) {
+        location = normalizedCity;
+    }
+
+    if (location && normalizedISP) return `${location}${normalizedISP}`;
+    if (normalizedISP) return normalizedISP;
+    if (location) return `${location}（运营商未知）`;
+    return '-';
+}
+
+function normalizeLocationPart(value) {
+    return cleanText(value)
+        .replace(/^中国/, '')
+        .replace(/\s+/g, '')
+        .replace(/(?:壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|省|市)$/, '');
+}
+
+function normalizeISP(value) {
+    const text = cleanText(value).replace(/\s+/g, '');
+    if (!text) return '';
+    if (/联通|unicom/i.test(text)) return '联通';
+    if (/电信|telecom|chinanet/i.test(text)) return '电信';
+    if (/移动|cmcc|china.?mobile/i.test(text)) return '移动';
+    if (/广电|broadcast/i.test(text)) return '广电';
+    if (/铁通|tietong/i.test(text)) return '铁通';
+    if (/教育网|cernet/i.test(text)) return '教育网';
+    return text.replace(/^中国/, '');
+}
+
+function cleanText(value) {
+    return value === null || typeof value === 'undefined' ? '' : String(value).trim();
+}
+
+function isValidIPAddress(value) {
+    const text = cleanText(value);
+    if (!text) return false;
+    if (text.includes(':')) return /^[0-9a-f:]+$/i.test(text);
+    const parts = text.split('.');
+    return parts.length === 4 && parts.every(function (part) {
+        return /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255;
+    });
+}
+
+// ============================================================
 // API 请求
 // ============================================================
 
@@ -435,6 +667,9 @@ function createRequestResult(item, groupName, data) {
         label: formatRequestLabel(groupName, item),
         slot: item.slot,
         success: !error,
+        apiRequested: true,
+        cacheHit: false,
+        cacheComparable: !error,
         error,
         currentIp: hasCurrentIP ? data.currentIp.trim() : '-',
         whitelist
@@ -449,7 +684,9 @@ function isAlreadyPinnedResponse(data) {
 
 function createAlreadyPinnedResult(item, groupName) {
     const label = formatRequestLabel(groupName, item);
-    const previous = findPreviousRequestResult(item, label);
+    const snapshot = readSnapshot();
+    const strictPrevious = findPreviousRequestResultInSnapshot(snapshot, item, label, false);
+    const previous = strictPrevious || findPreviousRequestResultInSnapshot(snapshot, item, label, true);
     const hasPreviousData = previous && (
         (previous.currentIp && previous.currentIp !== '-') ||
         (Array.isArray(previous.whitelist) && previous.whitelist.length > 0)
@@ -459,6 +696,9 @@ function createAlreadyPinnedResult(item, groupName) {
         label,
         slot: item.slot,
         success: true,
+        apiRequested: true,
+        cacheHit: false,
+        cacheComparable: Boolean(strictPrevious),
         statusText: '已存在',
         detail: hasPreviousData
             ? '当前 IP 已存在于其他 slot；IP 和白名单沿用上次结果'
@@ -469,8 +709,23 @@ function createAlreadyPinnedResult(item, groupName) {
     };
 }
 
-function findPreviousRequestResult(item, label) {
-    const snapshot = readSnapshot();
+function createCachedMatchResult(item, groupName, previous, publicInfo) {
+    return {
+        label: formatRequestLabel(groupName, item),
+        slot: item.slot,
+        success: true,
+        apiRequested: false,
+        cacheHit: true,
+        cacheComparable: true,
+        statusText: '无需更新',
+        detail: `公网 IP 与缓存中 slot ${item.slot} 一致，未调用写入 API`,
+        error: '',
+        currentIp: publicInfo.ip || (previous && previous.currentIp ? previous.currentIp : '-'),
+        whitelist: previous && Array.isArray(previous.whitelist) ? previous.whitelist : []
+    };
+}
+
+function findPreviousRequestResultInSnapshot(snapshot, item, label, allowFallback) {
     if (!snapshot || !Array.isArray(snapshot.results)) return null;
 
     const usableResults = snapshot.results.filter(hasUsableRequestData);
@@ -483,7 +738,7 @@ function findPreviousRequestResult(item, label) {
     const sameToken = usableResults.find(function (result) {
         return equivalentLabels.includes(result.label);
     });
-    return sameToken || usableResults[0] || null;
+    return sameToken || (allowFallback ? usableResults[0] : null) || null;
 }
 
 function getEquivalentRequestLabels(token) {
@@ -510,11 +765,29 @@ function hasUsableRequestData(result) {
     );
 }
 
-function createRequestFailure(item, groupName, error) {
+function getWhitelistSlotIP(result, slot) {
+    if (!result || !Array.isArray(result.whitelist)) return '';
+    const targetSlot = String(slot);
+    const entry = result.whitelist.find(function (item) {
+        return item && String(item.slot) === targetSlot;
+    });
+    return entry && entry.ip ? String(entry.ip).trim() : '';
+}
+
+function isSameIPAddress(left, right) {
+    const leftValue = cleanText(left).replace(/^\[|\]$/g, '').toLowerCase();
+    const rightValue = cleanText(right).replace(/^\[|\]$/g, '').toLowerCase();
+    return Boolean(leftValue) && leftValue === rightValue;
+}
+
+function createRequestFailure(item, groupName, error, apiRequested) {
     return {
         label: formatRequestLabel(groupName, item),
         slot: item.slot,
         success: false,
+        apiRequested: apiRequested !== false,
+        cacheHit: false,
+        cacheComparable: false,
         error: getErrorMessage(error),
         currentIp: '-',
         whitelist: []
@@ -569,15 +842,80 @@ function formatServerError(value) {
 // 持久化
 // ============================================================
 
+function readSlotCache() {
+    try {
+        const raw = readStore(getStoreKey('slot-cache'));
+        if (!raw) return { version: 1, entries: {} };
+        const value = JSON.parse(raw);
+        if (!value || typeof value !== 'object') return { version: 1, entries: {} };
+        return {
+            version: 1,
+            entries: value.entries && typeof value.entries === 'object' ? value.entries : {}
+        };
+    } catch (error) {
+        return { version: 1, entries: {} };
+    }
+}
+
+function findSlotCacheResult(cache, item) {
+    const entries = cache && cache.entries && typeof cache.entries === 'object' ? cache.entries : {};
+    const entry = entries[getSlotCacheEntryKey(item)];
+    if (!entry || !isValidIPAddress(entry.ip)) return null;
+    const whitelist = Array.isArray(entry.whitelist) && entry.whitelist.length
+        ? normalizeWhitelist(entry.whitelist)
+        : [{ slot: String(item.slot), ip: String(entry.ip) }];
+    return {
+        currentIp: entry.currentIp || entry.ip,
+        whitelist,
+        cacheComparable: true
+    };
+}
+
+function updateSlotCacheFromResults(cache, items, results) {
+    const value = cache && typeof cache === 'object' ? cache : { version: 1, entries: {} };
+    if (!value.entries || typeof value.entries !== 'object') value.entries = {};
+    let changed = false;
+
+    items.forEach(function (item, index) {
+        const result = results[index];
+        if (!item || !item.valid || !result || !result.success || result.cacheComparable === false) return;
+        const slotIP = getWhitelistSlotIP(result, item.slot);
+        if (!isValidIPAddress(slotIP)) return;
+        const key = getSlotCacheEntryKey(item);
+        if (result.cacheHit && value.entries[key]) return;
+        value.entries[key] = {
+            slot: String(item.slot),
+            ip: slotIP,
+            currentIp: result.currentIp || slotIP,
+            whitelist: Array.isArray(result.whitelist) ? result.whitelist : [],
+            updatedAt: Date.now()
+        };
+        changed = true;
+    });
+
+    if (!changed) return;
+    try {
+        const saved = writeStore(JSON.stringify(value), getStoreKey('slot-cache'));
+        if (!saved) console.log(`[${SCRIPT_NAME}] 保存 slot IP 缓存失败: persistentStore.write 返回 false`);
+    } catch (error) {
+        console.log(`[${SCRIPT_NAME}] 保存 slot IP 缓存失败: ${getErrorMessage(error)}`);
+    }
+}
+
+function getSlotCacheEntryKey(item) {
+    return `${hashString(item && item.token ? item.token : '')}:${item && item.slot ? item.slot : '?'}`;
+}
+
 function createSnapshot(options) {
     return {
-        version: 1,
+        version: 2,
         status: options.status,
         summary: options.summary,
         style: options.style,
         network: options.network,
         trigger: options.trigger,
         note: options.note || '',
+        publicInfo: options.publicInfo || createPublicInfo({}),
         results: options.results || [],
         updatedAt: Date.now()
     };
@@ -689,9 +1027,18 @@ function renderPanel(snapshot) {
             : (snapshot.trigger === 'manual'
                 ? '手动更新'
                 : (snapshot.trigger === 'panel-auto' ? 'Panel 自动刷新' : '网络变化')));
+    const publicInfo = snapshot.publicInfo && typeof snapshot.publicInfo === 'object'
+        ? snapshot.publicInfo
+        : {};
+    const publicIP = publicInfo.ip
+        ? `${publicInfo.ip}${publicInfo.provider ? `（${publicInfo.provider}）` : ''}`
+        : (publicInfo.error ? '查询失败' : '-');
+    const carrier = publicInfo.carrier && publicInfo.carrier !== '-' ? publicInfo.carrier : '-';
     const lines = [
         `API 请求结果: ${snapshot.summary || '失败'}`,
         `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
+        `公网 IP: ${publicIP}`,
+        `运营商: ${carrier}`,
         `触发方式: ${triggerLabel}`,
         `更新时间: ${formatDate(snapshot.updatedAt)}`
     ];
@@ -758,15 +1105,34 @@ function getErrorMessage(error) {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        runUpdate,
         parseArgs,
         buildConfig,
+        parseBooleanArg,
         normalizeHost,
         parseTokenList,
         parseList,
         getNetworkInfo,
         getPrimaryInterfaces,
         isCellularInterface,
+        getDirectInfo,
+        parse126PublicInfo,
+        parseBilibiliPublicInfo,
+        parseIPIPPublicInfo,
+        createPublicInfo,
+        formatCarrierLabel,
+        normalizeLocationPart,
+        normalizeISP,
+        isValidIPAddress,
         createRequestResult,
+        createCachedMatchResult,
+        findPreviousRequestResultInSnapshot,
+        getWhitelistSlotIP,
+        isSameIPAddress,
+        readSlotCache,
+        findSlotCacheResult,
+        updateSlotCacheFromResults,
+        getSlotCacheEntryKey,
         normalizeWhitelist,
         renderPanel,
         hashString

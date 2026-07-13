@@ -23,9 +23,10 @@
 - 根据当前网络环境自动选择蜂窝或非蜂窝 token 组；Wi-Fi、有线网卡及其他接口均属于非蜂窝。
 - 支持一个网络配置多个 `token@slot_id`，并汇总展示全部请求结果。
 - 支持指定自动更新时需要跳过的 Wi-Fi SSID。
+- Surge 在网络变化和定时任务中会先通过 `DIRECT` 查询公网 IP；如果与缓存白名单中当前 slot 的 IP 一致，则不调用写入 API。
 - Surge iOS 可点击 Panel 刷新按钮立即更新；Stash 可点击 Tile 手动刷新；Egern、Loon 与 Quantumult X 提供独立的手动更新脚本。
-- 所有白名单 API 请求强制使用客户端的 `DIRECT` 策略。
-- Surge iOS Panel、Stash Tile 与 Egern Widget 展示成功、失败或部分失败，以及当前 IP 和完整白名单；Loon 通过“查看最近结果”通知、Quantumult X 通过“查看状态”UIAction 展示。
+- 所有白名单 API 请求以及 Surge 公网 IP 查询强制使用客户端的 `DIRECT` 策略。
+- Surge iOS Panel 额外展示公网 IP、查询来源缩写和运营商地区；其他客户端继续展示成功、失败或部分失败，以及当前 IP 和完整白名单。
 
 ## 安装
 
@@ -99,6 +100,7 @@ Quantumult X 没有公开 Surge 式主接口字段。本实现优先将非空 SS
 | `cellular_tokens` | 二选一 | 蜂窝网络使用的 token，格式为 `token@slot_id` |
 | `wifi_tokens` | 二选一 | Wi-Fi、有线网卡及其他非蜂窝网络使用的 token，格式为 `token@slot_id`；Loon 或 Quantumult X 无法确认蜂窝时也使用此组 |
 | `skip_ssids` | 否 | 自动更新时需要跳过的 Wi-Fi SSID，多个 SSID 使用竖线分隔 |
+| `cache_diff` | 否 | 仅 Surge 使用。`true` 时比较公网 IP 与 slot 缓存，相同则跳过写入；`false` 时直接调用白名单 API。默认 `true` |
 
 `cellular_tokens` 和 `wifi_tokens` 不能同时为空。每组可以配置多个 token，使用 `|` 分隔：
 
@@ -106,6 +108,7 @@ Quantumult X 没有公开 Surge 式主接口字段。本实现优先将非空 SS
 cellular_tokens=token1@3|token2@4
 wifi_tokens=token3@2|token4@5
 skip_ssids=Home|Office
+cache_diff=true
 ```
 
 `slot_id` 必须是非负整数。实际可用范围由服务器返回的白名单 `limit` 决定。
@@ -134,13 +137,19 @@ Surge iOS Panel 的自动刷新、Stash Tile 的非点击刷新、Egern 状态 W
 
 ## API 请求
 
-每个 token 会调用一次：
+需要写入时，每个 token 会调用一次：
 
 ```http
 GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 ```
 
-请求强制使用 `DIRECT`，确保服务器识别到当前蜂窝或非蜂窝网络的真实公网出口 IP。多个 token 会全部调用，并根据结果汇总为：
+请求强制使用 `DIRECT`，确保服务器识别到当前蜂窝或非蜂窝网络的真实公网出口 IP。
+
+Surge 的网络变化和定时任务会先通过 `126`、`BILI`、`IPIP` 三个来源依次查询公网 IP，所有查询同样强制使用 `DIRECT`。取得公网 IP 后，脚本按当前 `token@slot` 的哈希找到对应 slot 缓存；如果缓存 IP 与公网 IP 一致，该 token 显示为“无需更新”，不会调用白名单写入 API。公网 IP 查询失败时会继续调用写入 API，避免第三方查询服务异常造成漏更新。
+
+`cache_diff` 只控制是否执行上述缓存比较。设为 `false` 时，网络变化和定时任务仍会查询并展示公网 IP 与运营商，但会跳过比较步骤，直接调用所有有效 token 的白名单写入 API。
+
+点击 Surge Panel 刷新按钮时仍会先查询并展示公网 IP 与运营商，但属于强制刷新，不受 `cache_diff` 影响；即使公网 IP 与缓存一致，也会调用所有有效 token 的白名单写入 API。多个 token 的执行结果汇总为：
 
 - 成功：全部请求成功。
 - 部分失败：部分请求成功、部分失败。
@@ -153,14 +162,16 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 Surge iOS Panel、Stash Tile、Egern Widget、Loon 最近结果通知，以及 Quantumult X 交互结果页会展示最近一次请求的：
 
 - API 请求结果和当时的网络环境。
+- Surge Panel 显示公网 IP，括号中标注查询来源 `126`、`BILI` 或 `IPIP`。
+- Surge Panel 显示地区与运营商，例如“上海联通”“江苏苏州电信”“浙江杭州移动”。
 - 触发方式与结果时间。
 - 每个 `token@slot_id` 对应请求的成功或失败状态。
 - 当前 IP。
 - 白名单，格式为 `slot: IP`。
 
-蜂窝和非蜂窝网络不会分别保存结果，所有网络共用同一份最近结果快照。新的 API 请求结果会覆盖当前展示，最近可用结果历史仍保存在同一个存储键中；遇到“IP 已存在于其他 slot”时，会优先按相同 token 跨网络复用上一次的当前 IP 和白名单，匹配不到时再使用最近一条可用结果。
+蜂窝和非蜂窝网络不会分别保存结果，所有网络共用同一份最近结果快照。新的更新结果会覆盖当前展示；遇到“IP 已存在于其他 slot”时，会优先按相同 token 跨网络复用上一次的当前 IP 和白名单，匹配不到时再使用最近一条可用结果。
 
-持久化内容不包含原始 token；用于隔离不同模块配置的存储键只包含配置哈希。
+持久化内容包含最近的公网 IP、查询来源、运营商信息、白名单结果，以及用于跨网络切换比较的 slot IP 缓存。slot 缓存使用 `token` 哈希与 slot 作为键，不区分蜂窝和非蜂窝，也不保存原始 token；用于隔离不同模块配置的存储键只包含配置哈希。
 
 ## 注意事项
 
