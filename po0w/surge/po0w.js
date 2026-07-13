@@ -665,11 +665,13 @@ function createRequestResult(item, groupName, data) {
 
     return {
         label: formatRequestLabel(groupName, item),
+        tokenKey: getSlotCacheEntryKey(item),
         slot: item.slot,
         success: !error,
         apiRequested: true,
         cacheHit: false,
         cacheComparable: !error,
+        whitelistReceived: hasWhitelist,
         error,
         currentIp: hasCurrentIP ? data.currentIp.trim() : '-',
         whitelist
@@ -694,11 +696,13 @@ function createAlreadyPinnedResult(item, groupName) {
 
     return {
         label,
+        tokenKey: getSlotCacheEntryKey(item),
         slot: item.slot,
         success: true,
         apiRequested: true,
         cacheHit: false,
         cacheComparable: Boolean(strictPrevious),
+        whitelistReceived: false,
         statusText: '已存在',
         detail: hasPreviousData
             ? '当前 IP 已存在于其他 slot；IP 和白名单沿用上次结果'
@@ -712,11 +716,13 @@ function createAlreadyPinnedResult(item, groupName) {
 function createCachedMatchResult(item, groupName, previous, publicInfo) {
     return {
         label: formatRequestLabel(groupName, item),
+        tokenKey: getSlotCacheEntryKey(item),
         slot: item.slot,
         success: true,
         apiRequested: false,
         cacheHit: true,
         cacheComparable: true,
+        whitelistReceived: false,
         statusText: '无需更新',
         detail: `公网 IP 与缓存中 slot ${item.slot} 一致，未调用写入 API`,
         error: '',
@@ -783,11 +789,13 @@ function isSameIPAddress(left, right) {
 function createRequestFailure(item, groupName, error, apiRequested) {
     return {
         label: formatRequestLabel(groupName, item),
+        tokenKey: getSlotCacheEntryKey(item),
         slot: item.slot,
         success: false,
         apiRequested: apiRequested !== false,
         cacheHit: false,
         cacheComparable: false,
+        whitelistReceived: false,
         error: getErrorMessage(error),
         currentIp: '-',
         whitelist: []
@@ -844,22 +852,26 @@ function formatServerError(value) {
 
 function readSlotCache() {
     try {
-        const raw = readStore(getStoreKey('slot-cache'));
-        if (!raw) return { version: 1, entries: {} };
+        const tokenCacheKey = getStoreKey('token-cache');
+        const tokenCacheRaw = readStore(tokenCacheKey);
+        const raw = tokenCacheRaw || readStore(getStoreKey('slot-cache'));
+        if (!raw) return { version: 2, entries: {} };
         const value = JSON.parse(raw);
-        if (!value || typeof value !== 'object') return { version: 1, entries: {} };
-        return {
-            version: 1,
+        if (!value || typeof value !== 'object') return { version: 2, entries: {} };
+        const cache = {
+            version: 2,
             entries: value.entries && typeof value.entries === 'object' ? value.entries : {}
         };
+        if (!tokenCacheRaw) writeStore(JSON.stringify(cache), tokenCacheKey);
+        return cache;
     } catch (error) {
-        return { version: 1, entries: {} };
+        return { version: 2, entries: {} };
     }
 }
 
 function findSlotCacheResult(cache, item) {
     const entries = cache && cache.entries && typeof cache.entries === 'object' ? cache.entries : {};
-    const entry = entries[getSlotCacheEntryKey(item)];
+    const entry = findSlotCacheEntry(entries, item);
     if (!entry || !isValidIPAddress(entry.ip)) return null;
     const whitelist = Array.isArray(entry.whitelist) && entry.whitelist.length
         ? normalizeWhitelist(entry.whitelist)
@@ -872,7 +884,8 @@ function findSlotCacheResult(cache, item) {
 }
 
 function updateSlotCacheFromResults(cache, items, results) {
-    const value = cache && typeof cache === 'object' ? cache : { version: 1, entries: {} };
+    const value = cache && typeof cache === 'object' ? cache : { version: 2, entries: {} };
+    value.version = 2;
     if (!value.entries || typeof value.entries !== 'object') value.entries = {};
     let changed = false;
 
@@ -882,6 +895,12 @@ function updateSlotCacheFromResults(cache, items, results) {
         const slotIP = getWhitelistSlotIP(result, item.slot);
         if (!isValidIPAddress(slotIP)) return;
         const key = getSlotCacheEntryKey(item);
+        const legacyPrefix = `${key}:`;
+        Object.keys(value.entries).forEach(function (entryKey) {
+            if (entryKey.indexOf(legacyPrefix) !== 0) return;
+            delete value.entries[entryKey];
+            changed = true;
+        });
         if (result.cacheHit && value.entries[key]) return;
         value.entries[key] = {
             slot: String(item.slot),
@@ -895,15 +914,35 @@ function updateSlotCacheFromResults(cache, items, results) {
 
     if (!changed) return;
     try {
-        const saved = writeStore(JSON.stringify(value), getStoreKey('slot-cache'));
-        if (!saved) console.log(`[${SCRIPT_NAME}] 保存 slot IP 缓存失败: persistentStore.write 返回 false`);
+        const saved = writeStore(JSON.stringify(value), getStoreKey('token-cache'));
+        if (!saved) console.log(`[${SCRIPT_NAME}] 保存 token 缓存失败: persistentStore.write 返回 false`);
     } catch (error) {
-        console.log(`[${SCRIPT_NAME}] 保存 slot IP 缓存失败: ${getErrorMessage(error)}`);
+        console.log(`[${SCRIPT_NAME}] 保存 token 缓存失败: ${getErrorMessage(error)}`);
     }
 }
 
 function getSlotCacheEntryKey(item) {
-    return `${hashString(item && item.token ? item.token : '')}:${item && item.slot ? item.slot : '?'}`;
+    return hashString(item && item.token ? item.token : '');
+}
+
+function findSlotCacheEntry(entries, item) {
+    const key = getSlotCacheEntryKey(item);
+    if (entries[key]) return entries[key];
+
+    const legacyPrefix = `${key}:`;
+    const legacyEntries = Object.keys(entries).filter(function (entryKey) {
+        return entryKey.indexOf(legacyPrefix) === 0;
+    }).map(function (entryKey) {
+        return entries[entryKey];
+    }).filter(Boolean);
+    if (!legacyEntries.length) return null;
+
+    const targetSlot = String(item && item.slot !== undefined ? item.slot : '?');
+    return legacyEntries.find(function (entry) {
+        return Array.isArray(entry.whitelist) && entry.whitelist.some(function (whitelistItem) {
+            return whitelistItem && String(whitelistItem.slot) === targetSlot;
+        });
+    }) || legacyEntries[0];
 }
 
 function createSnapshot(options) {
@@ -960,11 +999,89 @@ function createFailureSnapshot(error, trigger) {
 
 function writeSnapshot(snapshot) {
     try {
+        mergeSnapshotResultsWithPrevious(snapshot, readSnapshot());
         const saved = writeStore(JSON.stringify(snapshot), getStoreKey('snapshot'));
         if (!saved) console.log(`[${SCRIPT_NAME}] 保存 Panel 结果失败: persistentStore.write 返回 false`);
     } catch (error) {
         console.log(`[${SCRIPT_NAME}] 保存 Panel 结果失败: ${getErrorMessage(error)}`);
     }
+}
+
+function mergeSnapshotResultsWithPrevious(snapshot, previous) {
+    const previousResults = previous && Array.isArray(previous.results) ? previous.results : [];
+    if (!previousResults.length) return snapshot;
+
+    const currentResults = snapshot && Array.isArray(snapshot.results) ? snapshot.results : [];
+    if (!currentResults.length) {
+        snapshot.results = copySnapshotResults(previousResults);
+        snapshot.note = appendFallbackNote(snapshot.note, previousResults.length);
+        return snapshot;
+    }
+
+    let fallbackCount = 0;
+    snapshot.results = currentResults.map(function(result) {
+        if (result && result.success && result.apiRequested && result.whitelistReceived === true) return result;
+        const tokenKey = getSnapshotResultTokenKey(result);
+        const previousResult = previousResults.find(function(candidate) {
+            const candidateKey = getSnapshotResultTokenKey(candidate);
+            if (tokenKey && candidateKey) return tokenKey === candidateKey;
+            return candidate && result && candidate.label === result.label;
+        });
+        if (!previousResult) return result;
+        fallbackCount++;
+        return Object.assign({}, result, {
+            detail: appendFallbackDetail(result),
+            currentIp: previousResult.currentIp || '-',
+            whitelist: copySnapshotWhitelist(previousResult.whitelist)
+        });
+    });
+    if (fallbackCount) snapshot.note = appendFallbackNote(snapshot.note, fallbackCount);
+    return snapshot;
+}
+
+function getSnapshotResultTokenKey(result) {
+    if (result && result.tokenKey) return String(result.tokenKey);
+    const label = result && result.label ? String(result.label) : '';
+    let tokenKey = '';
+    [
+        { value: rawArgs.cellular_tokens, type: 'cellular', groupNames: ['蜂窝'] },
+        { value: rawArgs.wifi_tokens, type: 'wifi', groupNames: ['Wi-Fi', '非蜂窝'] }
+    ].some(function(group) {
+        return parseTokenList(group.value, group.type).some(function(item) {
+            if (!item.valid) return false;
+            const matched = group.groupNames.some(function(groupName) {
+                return formatRequestLabel(groupName, item) === label;
+            });
+            if (matched) tokenKey = getSlotCacheEntryKey(item);
+            return matched;
+        });
+    });
+    return tokenKey;
+}
+
+function appendFallbackDetail(result) {
+    const detail = result && result.detail ? String(result.detail) : '';
+    const fallback = '本次未从 API 获取有效白名单，当前 IP 和白名单沿用上次结果';
+    return detail ? `${detail}；${fallback}` : fallback;
+}
+
+function appendFallbackNote(note, count) {
+    const text = String(note || '');
+    if (text.includes('沿用上次结果') || text.includes('沿用上一次')) return text;
+    const fallback = `${count} 项未从 API 获取有效白名单，沿用上次结果`;
+    return text ? `${text}；${fallback}` : fallback;
+}
+
+function copySnapshotResults(results) {
+    return (Array.isArray(results) ? results : []).map(function(result) {
+        return Object.assign({}, result, { whitelist: copySnapshotWhitelist(result && result.whitelist) });
+    });
+}
+
+function copySnapshotWhitelist(whitelist) {
+    return (Array.isArray(whitelist) ? whitelist : []).map(function(entry) {
+        return { slot: entry.slot, ip: entry.ip };
+    });
 }
 
 function readSnapshot() {

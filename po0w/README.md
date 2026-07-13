@@ -2,7 +2,7 @@
 
 通过客户端当前的公网出口 IP 调用防火墙 API，自动维护目标服务器的访问白名单。
 
-目前支持 **Surge iOS、Surge macOS、Egern、Stash、Loon** 和 **Quantumult X**，后续将逐步支持其他客户端。
+目前支持 **Surge iOS、Surge macOS、Egern、Stash、Loon、Quantumult X** 和 **OpenWrt Shell**，后续将逐步支持其他客户端。
 
 ## 客户端支持
 
@@ -14,6 +14,7 @@
 | Stash | 已支持 | [`stash/po0w.stoverride`](stash/po0w.stoverride) |
 | Loon | 已支持 | [`loon/po0w.plugin`](loon/po0w.plugin) |
 | Quantumult X | 已支持 | [`quanx/po0w.conf`](quanx/po0w.conf) |
+| OpenWrt Shell | 已支持 | [`update-po0-whitelist.sh`](update-po0-whitelist.sh) |
 | 其他客户端 | 计划中 | - |
 
 ## 功能
@@ -27,6 +28,7 @@
 - Surge iOS 可点击 Panel 刷新按钮立即更新；Stash 可点击 Tile 手动刷新；Egern、Loon 与 Quantumult X 提供独立的手动更新脚本。
 - 所有白名单 API 请求以及公网 IP 查询强制使用客户端的 `DIRECT` 策略。
 - Panel、Tile、Widget、通知和交互结果页展示公网 IP、查询来源缩写、运营商地区、当前 IP 和完整白名单。
+- OpenWrt Shell 适用于固定宽带，通过系统 cron 查询公网 IPv4，并将 API 返回的 `currentIp` 缓存到 `/tmp`。
 
 ## 安装
 
@@ -39,6 +41,28 @@ https://raw.githubusercontent.com/alecthw/chnlist/main/po0w/surge/po0w.sgmodule
 ```
 
 安装后编辑模块参数，将示例 token 替换为实际值。Surge Mac 使用同一个模块，Wi-Fi、有线网卡及其他网络均使用 `wifi_tokens`；Mac 不支持 Information Panel，当前先验证网络变化与 30 分钟定时更新功能。
+
+### OpenWrt Shell
+
+下载 [`update-po0-whitelist.sh`](update-po0-whitelist.sh)，编辑脚本顶部的 `TOKEN`、`SLOT`、`CACHE_DIFF` 和 `CACHE_MAX_AGE_HOURS`，然后添加系统 cron：
+
+```sh
+chmod +x /root/update-po0-whitelist.sh
+```
+
+```cron
+*/5 * * * * /root/update-po0-whitelist.sh > /root/update-po0-whitelist.log 2>&1
+```
+
+`CACHE_MAX_AGE_HOURS` 设置缓存最长有效时间，单位为小时，默认值为 `12`。`CACHE_DIFF=true` 时，公网 IPv4 与 `/tmp/po0w-currentip-slot-<SLOT>` 中的缓存一致且缓存未超过该时间，便跳过白名单 API；缓存过期后会强制更新。设为 `false` 时仍查询公网 IP，但每次均调用 API。只有 API 成功返回有效 `currentIp` 后才会同时更新缓存 IP 和 Unix 时间戳。
+
+需要手动强制刷新时执行：
+
+```sh
+/root/update-po0-whitelist.sh -f
+```
+
+`-f` 不受 `CACHE_DIFF`、公网 IP 是否变化和缓存时间影响，但仍要求公网 IP 查询成功，并且只在白名单 API 成功后更新本地缓存。
 
 ### Egern
 
@@ -100,7 +124,7 @@ Quantumult X 没有公开 Surge 式主接口字段。本实现优先将非空 SS
 | `cellular_tokens` | 二选一 | 蜂窝网络使用的 token，格式为 `token@slot_id` |
 | `wifi_tokens` | 二选一 | Wi-Fi、有线网卡及其他非蜂窝网络使用的 token，格式为 `token@slot_id`；Loon 或 Quantumult X 无法确认蜂窝时也使用此组 |
 | `skip_ssids` | 否 | 自动更新时需要跳过的 Wi-Fi SSID，多个 SSID 使用竖线分隔 |
-| `cache_diff` | 否 | `true` 时比较公网 IP 与 slot 缓存，相同则跳过写入；`false` 时直接调用白名单 API。默认 `true` |
+| `cache_diff` | 否 | `true` 时比较公网 IP 与 token 白名单缓存中的对应 slot，相同则跳过写入；`false` 时直接调用白名单 API。默认 `true` |
 
 `cellular_tokens` 和 `wifi_tokens` 不能同时为空。每组可以配置多个 token，使用 `|` 分隔：
 
@@ -145,7 +169,7 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 
 请求强制使用 `DIRECT`，确保服务器识别到当前蜂窝或非蜂窝网络的真实公网出口 IP。
 
-各客户端的自动任务会先通过 `126`、`BILI`、`IPIP` 三个来源依次查询公网 IP，所有查询同样强制使用 `DIRECT`。取得公网 IP 后，脚本按当前 `token@slot` 找到对应 slot 缓存；如果缓存 IP 与公网 IP 一致，该 token 显示为“无需更新”，不会调用白名单写入 API。公网 IP 查询失败时会继续调用写入 API，避免第三方查询服务异常造成漏更新。
+各客户端的自动任务会先通过 `126`、`BILI`、`IPIP` 三个来源依次查询公网 IP，所有查询同样强制使用 `DIRECT`。取得公网 IP 后，脚本按当前 `token` 找到共享的白名单缓存，再读取其中对应 slot 的 IP；如果缓存 IP 与公网 IP 一致，该 token 显示为“无需更新”，不会调用白名单写入 API。公网 IP 查询失败时会继续调用写入 API，避免第三方查询服务异常造成漏更新。
 
 `cache_diff` 只控制是否执行上述缓存比较。设为 `false` 时，网络变化和定时任务仍会查询并展示公网 IP 与运营商，但会跳过比较步骤，直接调用所有有效 token 的白名单写入 API。
 
@@ -156,6 +180,8 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 - 失败：全部请求失败。
 
 如果 API 返回 `{"code":403,"message":"IP is already pinned to another slot."}`，脚本会将该请求显示为“已存在”，不计入失败。因为当前 IP 已经处于白名单的其他 slot，无需重复添加；如果本地保存有该请求的上一次 IP 和白名单，则继续沿用展示。
+
+最近展示结果按 token 分别更新。只有本次 API 请求成功且响应明确包含 `whitelist` 数组时，才覆盖该 token 的展示结果；请求失败、返回 403、命中本地 IP 缓存或其他未取得有效白名单的情况，会保留该 token 上一次的当前 IP 和白名单，并在说明中标注沿用原因。如果部分 token 成功，则只更新成功取得白名单的项目，其余项目继续展示各自的上一次结果；没有上一次结果时才展示本次返回的空结果或错误。
 
 ## Panel / Tile / Widget / 通知与交互展示
 
@@ -169,9 +195,11 @@ Surge iOS Panel、Stash Tile、Egern Widget、Loon 最近结果通知，以及 Q
 - 当前 IP。
 - 白名单，格式为 `slot: IP`。
 
-蜂窝和非蜂窝网络不会分别保存结果，所有网络共用同一份最近结果快照。新的更新结果会覆盖当前展示；遇到“IP 已存在于其他 slot”时，会优先按相同 token 跨网络复用上一次的当前 IP 和白名单，匹配不到时再使用最近一条可用结果。
+蜂窝和非蜂窝网络不会分别保存结果，所有网络共用同一份最近结果快照。新的有效白名单按相同 token 覆盖当前展示；未取得白名单的项目继续沿用该 token 的上一次当前 IP 和白名单。匹配不到相同 token 且没有上一次结果时，才展示本次空结果或错误。
 
-持久化内容包含最近的公网 IP、查询来源、运营商信息、白名单结果，以及用于跨网络切换比较的 slot IP 缓存。比较记录使用 `token` 哈希定位并读取对应 slot，不区分蜂窝和非蜂窝，也不保存原始 token；用于隔离不同模块配置的存储键只包含配置哈希。
+所有客户端统一使用两份持久化数据：`snapshot` 只保存最近展示的网络环境、公网 IP、运营商和本次结果；`token-cache` 只保存用于比较的完整白名单。API 失败不会修改 `token-cache`，命中 `skip_ssids` 时继续沿用 `snapshot` 中上一次的展示结果。
+
+`token-cache` 使用 `token` 哈希定位，相同 token 即使配置不同 slot 也共享同一份缓存，比较时再从完整白名单中读取当前 slot；缓存不区分蜂窝和非蜂窝，也不保存原始 token。用于隔离不同模块配置的存储键只包含配置哈希。Egern、Stash、Loon 和 Quantumult X 升级后会自动将旧快照中的 `lastUsableResults` 迁移到独立缓存，新的快照不再保存 `lastRequestResults` 和 `lastUsableResults`。
 
 ## 注意事项
 
@@ -192,6 +220,7 @@ Surge iOS Panel、Stash Tile、Egern Widget、Loon 最近结果通知，以及 Q
 - [`loon/po0w.js`](loon/po0w.js)：使用 Loon `$argument`、`$config`、`$httpClient` 等原生接口的实现。
 - [`quanx/po0w.conf`](quanx/po0w.conf)：Quantumult X `[task_local]` 配置片段，提供网络变化、30 分钟定时和两个 UIAction。
 - [`quanx/po0w.js`](quanx/po0w.js)：使用 Quantumult X `$environment`、`$task`、`$prefs` 与 `$done` 的原生实现。
+- [`update-po0-whitelist.sh`](update-po0-whitelist.sh)：运行于 OpenWrt cron 的固定宽带白名单更新脚本。
 
 ## 后续计划
 

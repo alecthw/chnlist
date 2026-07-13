@@ -111,12 +111,12 @@ async function runUpdate() {
     }
 
     const forceRefresh = isManualTrigger(cfg.trigger);
-    const previousSnapshot = readSnapshot();
+    const tokenCache = readTokenCache();
     const tasks = selected.map(function (item) {
         if (!item.valid) {
             return Promise.resolve(createRequestFailure(item, groupName, item.error, false));
         }
-        const previous = findCachedRequestResult(previousSnapshot, item);
+        const previous = findCachedRequestResult(tokenCache, item);
         const cachedSlotIP = previous && previous.cacheComparable !== false
             ? getWhitelistSlotIP(previous, item.slot)
             : '';
@@ -126,6 +126,7 @@ async function runUpdate() {
         return requestWhitelist(cfg.host, item, groupName);
     });
     const results = await Promise.all(tasks);
+    updateTokenCacheFromResults(tokenCache, selected, results);
     const successCount = results.filter(function (result) { return result.success; }).length;
     const failureCount = results.length - successCount;
     const cacheHitCount = results.filter(function (result) { return result.cacheHit; }).length;
@@ -645,6 +646,7 @@ function createRequestResult(item, groupName, data) {
         apiRequested: true,
         cacheHit: false,
         cacheComparable: !error,
+        whitelistReceived: hasWhitelist,
         error,
         currentIp: hasCurrentIP ? data.currentIp.trim() : '-',
         whitelist
@@ -659,8 +661,8 @@ function isAlreadyPinnedResponse(data) {
 
 function createAlreadyPinnedResult(item, groupName) {
     const label = formatRequestLabel(groupName, item);
+    const strictPrevious = findCachedRequestResult(readTokenCache(), item);
     const snapshot = readSnapshot();
-    const strictPrevious = findCachedRequestResult(snapshot, item);
     const previous = strictPrevious || findPreviousRequestResultInSnapshot(snapshot, item, label, true);
     const hasPreviousData = previous && hasUsableRequestData(previous);
 
@@ -672,6 +674,7 @@ function createAlreadyPinnedResult(item, groupName) {
         apiRequested: true,
         cacheHit: false,
         cacheComparable: Boolean(strictPrevious),
+        whitelistReceived: false,
         statusText: '已存在',
         detail: hasPreviousData
             ? '当前 IP 已存在于其他 slot；当前 IP 和白名单沿用上次结果'
@@ -691,6 +694,7 @@ function createCachedMatchResult(item, groupName, previous, publicInfo) {
         apiRequested: false,
         cacheHit: true,
         cacheComparable: true,
+        whitelistReceived: false,
         statusText: '无需更新',
         detail: `公网 IP 与缓存中 slot ${item.slot} 一致，未调用写入 API`,
         error: '',
@@ -699,18 +703,25 @@ function createCachedMatchResult(item, groupName, previous, publicInfo) {
     };
 }
 
-function findCachedRequestResult(snapshot, item) {
-    if (!snapshot) return null;
+function findCachedRequestResult(cache, item) {
+    const entries = cache && cache.entries && typeof cache.entries === 'object' ? cache.entries : {};
     const requestKey = getRequestKey(item.token);
-    return collectUsableResults(snapshot).find(function(result) {
-        return result.requestKey && result.requestKey === requestKey && result.cacheComparable !== false;
-    }) || null;
+    const entry = entries[requestKey];
+    if (!entry || !isValidIPAddress(entry.ip)) return null;
+    return {
+        requestKey,
+        currentIp: entry.currentIp || entry.ip,
+        whitelist: Array.isArray(entry.whitelist) && entry.whitelist.length
+            ? normalizeWhitelist(entry.whitelist)
+            : [{ slot: String(entry.slot || item.slot), ip: String(entry.ip) }],
+        cacheComparable: true
+    };
 }
 
 function findPreviousRequestResultInSnapshot(snapshot, item, label, allowFallback) {
     if (!snapshot) return null;
 
-    const usableResults = collectUsableResults(snapshot);
+    const usableResults = (Array.isArray(snapshot.results) ? snapshot.results : []).filter(hasUsableRequestData);
     const requestKey = getRequestKey(item.token);
     const sameToken = usableResults.find(function (result) {
         return result.requestKey && result.requestKey === requestKey;
@@ -754,6 +765,7 @@ function createRequestFailure(item, groupName, error, apiRequested) {
         apiRequested: apiRequested !== false,
         cacheHit: false,
         cacheComparable: false,
+        whitelistReceived: false,
         error: sanitizeRequestError(error, item.token),
         currentIp: '-',
         whitelist: []
@@ -830,7 +842,7 @@ function formatServerError(value) {
 
 function createSnapshot(options) {
     return {
-        version: 4,
+        version: 2,
         status: options.status,
         summary: options.summary,
         network: options.network,
@@ -838,9 +850,6 @@ function createSnapshot(options) {
         note: options.note || '',
         publicInfo: options.publicInfo || createPublicInfo({}),
         results: options.results || [],
-        lastRequestResults: options.lastRequestResults || [],
-        lastRequestUpdatedAt: Number(options.lastRequestUpdatedAt || 0),
-        lastUsableResults: options.lastUsableResults || [],
         updatedAt: Date.now()
     };
 }
@@ -848,8 +857,8 @@ function createSnapshot(options) {
 function createSkippedSnapshot(network, trigger) {
     const previous = readSnapshot();
     const note = '命中 SKIP，已跳过';
-    const previousRequest = getPreviousRequestDisplay(previous);
-    if (!previousRequest) {
+    const previousResults = previous && Array.isArray(previous.results) ? previous.results : [];
+    if (!previousResults.length) {
         return createSnapshot({
             status: 'success',
             summary: '成功',
@@ -860,13 +869,17 @@ function createSkippedSnapshot(network, trigger) {
         });
     }
 
-    return Object.assign({}, previous, {
+    return {
+        version: 2,
+        status: previous.status,
+        summary: previous.summary,
         network,
         trigger,
         note: `${note}；请求结果沿用上一次`,
-        results: previousRequest.results,
-        updatedAt: previousRequest.updatedAt
-    });
+        publicInfo: previous.publicInfo || createPublicInfo({}),
+        results: copyRequestResults(previousResults),
+        updatedAt: Number(previous.updatedAt || 0)
+    };
 }
 
 function createFailureSnapshot(error) {
@@ -882,45 +895,66 @@ function createFailureSnapshot(error) {
 
 function writeSnapshot(snapshot) {
     try {
-        const previous = readSnapshot();
-        const currentResults = Array.isArray(snapshot.results) ? snapshot.results : [];
-        const previousRequest = getPreviousRequestDisplay(previous);
-        snapshot.version = 4;
-
-        if (currentResults.length > 0) {
-            snapshot.lastRequestResults = copyRequestResults(currentResults);
-            snapshot.lastRequestUpdatedAt = Number(snapshot.updatedAt || Date.now());
-        } else {
-            snapshot.lastRequestResults = previousRequest
-                ? copyRequestResults(previousRequest.results)
-                : [];
-            snapshot.lastRequestUpdatedAt = previousRequest ? previousRequest.updatedAt : 0;
-        }
-
-        snapshot.lastUsableResults = mergeUsableResultHistory(snapshot, previous);
+        mergeSnapshotResultsWithPrevious(snapshot, readSnapshot());
         const safeSnapshot = sanitizeSnapshotForStorage(snapshot);
-        const saved = $prefs.setValueForKey(JSON.stringify(safeSnapshot), getStoreKey('snapshot'));
+        const saved = writeStoredJSON(getStoreKey('snapshot'), safeSnapshot);
         if (!saved) console.log(`[${SCRIPT_NAME}] 保存状态失败: $prefs.setValueForKey 返回 false`);
     } catch (error) {
         console.log(`[${SCRIPT_NAME}] 保存状态失败: ${sanitizeAllTokens(getErrorMessage(error))}`);
     }
 }
 
-function readSnapshot() {
-    try {
-        const raw = $prefs.valueForKey(getStoreKey('snapshot'));
-        if (!raw) return null;
-        const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        return value && typeof value === 'object' ? value : null;
-    } catch (error) {
-        return null;
+function mergeSnapshotResultsWithPrevious(snapshot, previous) {
+    const previousResults = previous && Array.isArray(previous.results) ? previous.results : [];
+    if (!previousResults.length) return snapshot;
+    const currentResults = snapshot && Array.isArray(snapshot.results) ? snapshot.results : [];
+    if (!currentResults.length) {
+        snapshot.results = copyRequestResults(previousResults);
+        snapshot.note = appendFallbackNote(snapshot.note, previousResults.length);
+        return snapshot;
     }
+    let fallbackCount = 0;
+    snapshot.results = currentResults.map(function(result) {
+        if (result && result.success && result.apiRequested && result.whitelistReceived === true) return result;
+        const requestKey = result && result.requestKey ? String(result.requestKey) : '';
+        const previousResult = previousResults.find(function(candidate) {
+            const candidateKey = candidate && candidate.requestKey ? String(candidate.requestKey) : '';
+            if (requestKey && candidateKey) return requestKey === candidateKey;
+            return candidate && result && candidate.label === result.label;
+        });
+        if (!previousResult) return result;
+        fallbackCount++;
+        return Object.assign({}, result, {
+            detail: appendFallbackDetail(result),
+            currentIp: previousResult.currentIp || '-',
+            whitelist: Array.isArray(previousResult.whitelist) ? normalizeWhitelist(previousResult.whitelist) : []
+        });
+    });
+    if (fallbackCount) snapshot.note = appendFallbackNote(snapshot.note, fallbackCount);
+    return snapshot;
+}
+
+function appendFallbackDetail(result) {
+    const detail = result && result.detail ? String(result.detail) : '';
+    const fallback = '本次未从 API 获取有效白名单，当前 IP 和白名单沿用上次结果';
+    return detail ? `${detail}；${fallback}` : fallback;
+}
+
+function appendFallbackNote(note, count) {
+    const text = String(note || '');
+    if (text.includes('沿用上次结果') || text.includes('沿用上一次')) return text;
+    const fallback = `${count} 项未从 API 获取有效白名单，沿用上次结果`;
+    return text ? `${text}；${fallback}` : fallback;
+}
+
+function readSnapshot() {
+    return normalizeSnapshotForRead(readStoredJSON(getStoreKey('snapshot')));
 }
 
 function sanitizeSnapshotForStorage(snapshot) {
     const value = snapshot && typeof snapshot === 'object' ? snapshot : {};
     return {
-        version: 4,
+        version: 2,
         status: String(value.status || 'failure'),
         summary: sanitizeAllTokens(value.summary || '失败'),
         network: copyNetworkInfo(value.network),
@@ -928,11 +962,27 @@ function sanitizeSnapshotForStorage(snapshot) {
         note: sanitizeAllTokens(value.note || ''),
         publicInfo: copyPublicInfo(value.publicInfo),
         results: copyRequestResults(value.results),
-        lastRequestResults: copyRequestResults(value.lastRequestResults),
-        lastRequestUpdatedAt: Number(value.lastRequestUpdatedAt || 0),
-        lastUsableResults: copyRequestResults(value.lastUsableResults),
         updatedAt: Number(value.updatedAt || 0)
     };
+}
+
+function normalizeSnapshotForRead(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    const currentResults = Array.isArray(snapshot.results) ? snapshot.results : [];
+    const legacyResults = Array.isArray(snapshot.lastRequestResults) ? snapshot.lastRequestResults : [];
+    const useLegacyResults = !currentResults.length && legacyResults.length > 0;
+    return sanitizeSnapshotForStorage({
+        status: snapshot.status,
+        summary: snapshot.summary,
+        network: snapshot.network,
+        trigger: snapshot.trigger,
+        note: snapshot.note,
+        publicInfo: snapshot.publicInfo,
+        results: useLegacyResults ? legacyResults : currentResults,
+        updatedAt: useLegacyResults
+            ? (snapshot.lastRequestUpdatedAt || snapshot.updatedAt || 0)
+            : (snapshot.updatedAt || 0)
+    });
 }
 
 function copyPublicInfo(publicInfo) {
@@ -955,26 +1005,6 @@ function copyNetworkInfo(network) {
     };
 }
 
-function getPreviousRequestDisplay(snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') return null;
-    const current = Array.isArray(snapshot.results) ? snapshot.results : [];
-    if (current.length > 0) {
-        return {
-            results: copyRequestResults(current),
-            updatedAt: Number(snapshot.updatedAt || 0)
-        };
-    }
-
-    const stored = Array.isArray(snapshot.lastRequestResults)
-        ? snapshot.lastRequestResults
-        : [];
-    if (!stored.length) return null;
-    return {
-        results: copyRequestResults(stored),
-        updatedAt: Number(snapshot.lastRequestUpdatedAt || snapshot.updatedAt || 0)
-    };
-}
-
 function copyRequestResults(results) {
     return (Array.isArray(results) ? results : []).map(function (result) {
         const value = result && typeof result === 'object' ? result : {};
@@ -988,6 +1018,7 @@ function copyRequestResults(results) {
             apiRequested: Boolean(value.apiRequested),
             cacheHit: Boolean(value.cacheHit),
             cacheComparable: value.cacheComparable !== false,
+            whitelistReceived: Boolean(value.whitelistReceived),
             statusText: sanitizeAllTokens(value.statusText || ''),
             detail: sanitizeAllTokens(value.detail || ''),
             error: sanitizeAllTokens(value.error || ''),
@@ -1006,56 +1037,90 @@ function copyRequestResults(results) {
     });
 }
 
-function collectUsableResults(snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') return [];
-    const current = Array.isArray(snapshot.results) ? snapshot.results : [];
-    const history = Array.isArray(snapshot.lastUsableResults)
-        ? snapshot.lastUsableResults
-        : [];
-    return current.filter(function (result) {
-        return result && result.success && hasUsableRequestData(result);
-    }).concat(history.filter(hasUsableRequestData));
+function readTokenCache() {
+    const stored = readStoredJSON(getStoreKey('token-cache'));
+    if (stored && stored.entries && typeof stored.entries === 'object') {
+        return { version: 2, entries: stored.entries };
+    }
+    const migrated = migrateLegacyTokenCache(readStoredJSON(getStoreKey('snapshot')));
+    if (Object.keys(migrated.entries).length) writeTokenCache(migrated);
+    return migrated;
 }
 
-function mergeUsableResultHistory(snapshot, previous) {
-    const current = Array.isArray(snapshot.results)
-        ? snapshot.results.filter(function (result) {
-            return result && result.success && hasUsableRequestData(result);
-        })
-        : [];
-    const previousResults = collectUsableResults(previous);
-    const merged = [];
-    const seen = new Set();
-
-    current.concat(previousResults).forEach(function (result) {
-        const key = getHistoryResultKey(result);
-        if (seen.has(key)) return;
-        seen.add(key);
-        merged.push({
-            label: result.label || '',
-            requestKey: result.requestKey || '',
-            slot: result.slot === null || typeof result.slot === 'undefined'
-                ? '?'
-                : String(result.slot),
-            success: true,
-            apiRequested: Boolean(result.apiRequested),
-            cacheHit: Boolean(result.cacheHit),
-            cacheComparable: result.cacheComparable !== false,
-            statusText: result.statusText || '成功',
-            detail: result.detail || '',
-            error: '',
-            currentIp: result.currentIp || '-',
-            whitelist: Array.isArray(result.whitelist) ? result.whitelist : []
+function writeTokenCache(cache) {
+    try {
+        const saved = writeStoredJSON(getStoreKey('token-cache'), {
+            version: 2,
+            entries: cache && cache.entries && typeof cache.entries === 'object' ? cache.entries : {}
         });
-    });
-
-    return copyRequestResults(merged.slice(0, 50));
+        if (!saved) console.log(`[${SCRIPT_NAME}] 保存 token 缓存失败`);
+        return saved;
+    } catch (error) {
+        console.log(`[${SCRIPT_NAME}] 保存 token 缓存失败: ${sanitizeAllTokens(getErrorMessage(error))}`);
+        return false;
+    }
 }
 
-function getHistoryResultKey(result) {
-    const value = result && typeof result === 'object' ? result : {};
-    if (value.requestKey) return `token:${value.requestKey}`;
-    return `${String(value.label || '')}|${String(value.slot || '?')}`;
+function updateTokenCacheFromResults(cache, items, results) {
+    const value = cache && typeof cache === 'object' ? cache : { version: 2, entries: {} };
+    value.version = 2;
+    if (!value.entries || typeof value.entries !== 'object') value.entries = {};
+    let changed = false;
+    items.forEach(function(item, index) {
+        const result = results[index];
+        if (!item || !item.valid || !result || !result.success || result.cacheComparable === false) return;
+        const slotIP = getWhitelistSlotIP(result, item.slot);
+        if (!isValidIPAddress(slotIP)) return;
+        const key = getRequestKey(item.token);
+        if (result.cacheHit && value.entries[key]) return;
+        value.entries[key] = {
+            slot: String(item.slot),
+            ip: slotIP,
+            currentIp: result.currentIp || slotIP,
+            whitelist: Array.isArray(result.whitelist) ? normalizeWhitelist(result.whitelist) : [],
+            updatedAt: Date.now()
+        };
+        changed = true;
+    });
+    if (changed) writeTokenCache(value);
+}
+
+function migrateLegacyTokenCache(snapshot) {
+    const cache = { version: 2, entries: {} };
+    if (!snapshot || typeof snapshot !== 'object') return cache;
+    const current = Array.isArray(snapshot.results) ? snapshot.results : [];
+    const history = Array.isArray(snapshot.lastUsableResults) ? snapshot.lastUsableResults : [];
+    current.concat(history).forEach(function(result) {
+        if (!result || !result.success || result.cacheComparable === false || !hasUsableRequestData(result)) return;
+        const key = result.requestKey ? String(result.requestKey) : '';
+        if (!key || cache.entries[key]) return;
+        const slot = result.slot === null || typeof result.slot === 'undefined' ? '?' : String(result.slot);
+        const slotIP = getWhitelistSlotIP(result, slot);
+        if (!isValidIPAddress(slotIP)) return;
+        cache.entries[key] = {
+            slot,
+            ip: slotIP,
+            currentIp: result.currentIp || slotIP,
+            whitelist: Array.isArray(result.whitelist) ? normalizeWhitelist(result.whitelist) : [],
+            updatedAt: Number(snapshot.updatedAt || Date.now())
+        };
+    });
+    return cache;
+}
+
+function readStoredJSON(key) {
+    try {
+        const raw = $prefs.valueForKey(key);
+        if (!raw) return null;
+        const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return value && typeof value === 'object' ? value : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeStoredJSON(key, value) {
+    return $prefs.setValueForKey(JSON.stringify(value), key);
 }
 
 function getStoreKey(suffix) {
