@@ -94,22 +94,17 @@ async function runUpdate() {
             ? getWhitelistSlotIP(cachedPrevious, item.slot)
             : '';
         if (cfg.cacheDiff && !forceRefresh && publicInfo.ip && isSameIPAddress(publicInfo.ip, cachedSlotIP)) {
-            return Promise.resolve(createCachedMatchResult(item, groupName, previous, publicInfo));
+            return Promise.resolve(createCachedMatchResult(item, groupName, previous));
         }
         return requestWhitelist(cfg.host, item, groupName).then(function(result) {
-            return markCacheExpiredResult(result, cacheExpired, cfg.cacheMaxAgeHours);
+            return markCacheExpiredResult(result, cacheExpired);
         });
     });
     const results = await Promise.all(tasks);
     updateSlotCacheFromResults(slotCache, selected, results);
     const successCount = results.filter(function (result) { return result.success; }).length;
     const failureCount = results.length - successCount;
-    const cacheHitCount = results.filter(function (result) { return result.cacheHit; }).length;
     const expiredCacheCount = results.filter(function (result) { return result.cacheExpired; }).length;
-    const apiRequestCount = results.filter(function (result) { return result.apiRequested; }).length;
-    const apiSuccessCount = results.filter(function (result) {
-        return result.apiRequested && result.success;
-    }).length;
     let status = 'success';
     let summary = '成功';
     let style = 'good';
@@ -124,13 +119,9 @@ async function runUpdate() {
         style = 'alert';
     }
 
-    const notes = [`${successCount}/${results.length} 项成功`];
-    if (forceRefresh) notes.push('强制刷新');
+    const notes = [];
     if (!cfg.cacheDiff && !forceRefresh) notes.push('缓存比较已关闭');
-    if (cacheHitCount) notes.push(`${cacheHitCount} 个槽位 IP 未变化，已跳过写入`);
-    if (expiredCacheCount) notes.push(`${expiredCacheCount} 个 token 缓存超过 ${cfg.cacheMaxAgeHours} 小时，已强制更新`);
-    if (apiRequestCount) notes.push(`${apiSuccessCount}/${apiRequestCount} 个写入请求成功`);
-    if (!publicInfo.ip) notes.push('公网 IP 查询失败，未进行缓存比较');
+    if (expiredCacheCount) notes.push(`${expiredCacheCount} 项缓存过期`);
 
     const snapshot = createSnapshot({
         status,
@@ -143,7 +134,7 @@ async function runUpdate() {
         results
     });
     writeSnapshot(snapshot);
-    console.log(`[${SCRIPT_NAME}] ${network.label}：${summary}，${snapshot.note}`);
+    console.log(`[${SCRIPT_NAME}] ${network.label}：${summary}${snapshot.note ? `，${snapshot.note}` : ''}`);
     return snapshot;
 }
 
@@ -724,17 +715,17 @@ function createAlreadyPinnedResult(item, groupName) {
         cacheHit: false,
         cacheComparable: Boolean(strictPrevious),
         whitelistReceived: false,
-        statusText: '已存在',
+        statusText: 'IP 已在其他 slot',
         detail: hasPreviousData
-            ? '当前 IP 已存在于其他 slot；IP 和白名单沿用上次结果'
-            : '当前 IP 已存在于其他 slot；未返回当前 IP 和白名单',
+            ? '沿用上次数据'
+            : '暂无白名单数据',
         error: '',
         currentIp: hasPreviousData && previous.currentIp ? previous.currentIp : '-',
         whitelist: hasPreviousData && Array.isArray(previous.whitelist) ? previous.whitelist : []
     };
 }
 
-function createCachedMatchResult(item, groupName, previous, publicInfo) {
+function createCachedMatchResult(item, groupName, previous) {
     return {
         label: formatRequestLabel(groupName, item),
         tokenKey: getSlotCacheEntryKey(item),
@@ -744,10 +735,10 @@ function createCachedMatchResult(item, groupName, previous, publicInfo) {
         cacheHit: true,
         cacheComparable: true,
         whitelistReceived: false,
-        statusText: '无需更新',
-        detail: `公网 IP 与缓存中 slot ${item.slot} 一致，未调用写入 API`,
+        statusText: 'IP 未变化',
+        detail: '',
         error: '',
-        currentIp: publicInfo.ip || (previous && previous.currentIp ? previous.currentIp : '-'),
+        currentIp: previous && previous.currentIp ? previous.currentIp : '-',
         whitelist: previous && Array.isArray(previous.whitelist) ? previous.whitelist : []
     };
 }
@@ -814,11 +805,9 @@ function isTokenCacheExpired(updatedAt, maxAgeHours) {
     return age < 0 || age > Number(maxAgeHours) * 60 * 60 * 1000;
 }
 
-function markCacheExpiredResult(result, expired, maxAgeHours) {
+function markCacheExpiredResult(result, expired) {
     if (!expired || !result) return result;
     result.cacheExpired = true;
-    const detail = `token 缓存超过 ${maxAgeHours} 小时，已忽略缓存比较并强制调用 API`;
-    result.detail = result.detail ? `${result.detail}；${detail}` : detail;
     return result;
 }
 
@@ -913,7 +902,7 @@ function findSlotCacheResult(cache, item) {
         ? normalizeWhitelist(entry.whitelist)
         : [{ slot: String(item.slot), ip: String(entry.ip) }];
     return {
-        currentIp: entry.currentIp || entry.ip,
+        currentIp: entry.currentIp || '-',
         whitelist,
         cacheComparable: true,
         updatedAt: Number(entry.updatedAt || 0)
@@ -928,7 +917,7 @@ function updateSlotCacheFromResults(cache, items, results) {
 
     items.forEach(function (item, index) {
         const result = results[index];
-        if (!item || !item.valid || !result || !result.success ||
+        if (!item || !item.valid || !result || !result.success || result.apiRequested !== true ||
             result.cacheComparable === false || result.whitelistReceived !== true) return;
         const slotIP = getWhitelistSlotIP(result, item.slot);
         if (!isValidIPAddress(slotIP)) return;
@@ -943,7 +932,7 @@ function updateSlotCacheFromResults(cache, items, results) {
         value.entries[key] = {
             slot: String(item.slot),
             ip: slotIP,
-            currentIp: result.currentIp || slotIP,
+            currentIp: result.currentIp || '-',
             whitelist: Array.isArray(result.whitelist) ? result.whitelist : [],
             updatedAt: Date.now()
         };
@@ -1000,7 +989,7 @@ function createSnapshot(options) {
 
 function createSkippedSnapshot(network, trigger) {
     const previous = readSnapshot();
-    const note = `命中 SKIP，已跳过`;
+    const note = '命中 skip_ssids，未发起请求';
     const hasPreviousResults = previous && Array.isArray(previous.results) && previous.results.length > 0;
     if (!hasPreviousResults) {
         return createSnapshot({
@@ -1009,7 +998,7 @@ function createSkippedSnapshot(network, trigger) {
             style: 'info',
             network,
             trigger,
-            note: `${note}；暂无上一次请求结果`,
+            note: `${note}；暂无历史结果`,
             results: []
         });
     }
@@ -1017,7 +1006,7 @@ function createSkippedSnapshot(network, trigger) {
     return Object.assign({}, previous, {
         network,
         trigger,
-        note: `${note}；沿用上次结果`
+        note
     });
 }
 
@@ -1052,11 +1041,10 @@ function mergeSnapshotResultsWithPrevious(snapshot, previous) {
     const currentResults = snapshot && Array.isArray(snapshot.results) ? snapshot.results : [];
     if (!currentResults.length) {
         snapshot.results = copySnapshotResults(previousResults);
-        snapshot.note = appendFallbackNote(snapshot.note, previousResults.length);
+        snapshot.note = appendFallbackNote(snapshot.note);
         return snapshot;
     }
 
-    let fallbackCount = 0;
     snapshot.results = currentResults.map(function(result) {
         if (result && result.success && result.apiRequested && result.whitelistReceived === true) return result;
         const tokenKey = getSnapshotResultTokenKey(result);
@@ -1066,14 +1054,12 @@ function mergeSnapshotResultsWithPrevious(snapshot, previous) {
             return candidate && result && candidate.label === result.label;
         });
         if (!previousResult) return result;
-        fallbackCount++;
         return Object.assign({}, result, {
             detail: appendFallbackDetail(result),
             currentIp: previousResult.currentIp || '-',
             whitelist: copySnapshotWhitelist(previousResult.whitelist)
         });
     });
-    if (fallbackCount) snapshot.note = appendFallbackNote(snapshot.note, fallbackCount);
     return snapshot;
 }
 
@@ -1098,16 +1084,17 @@ function getSnapshotResultTokenKey(result) {
 }
 
 function appendFallbackDetail(result) {
-    const detail = result && result.detail ? String(result.detail) : '';
-    const fallback = '本次未从 API 获取有效白名单，当前 IP 和白名单沿用上次结果';
-    return detail ? `${detail}；${fallback}` : fallback;
+    if (result && result.cacheHit) return result.detail ? String(result.detail) : '';
+    if (result && result.statusText === '已存在' && result.detail) {
+        return String(result.detail);
+    }
+    return '沿用上次数据';
 }
 
-function appendFallbackNote(note, count) {
-    const text = String(note || '');
-    if (text.includes('沿用上次结果') || text.includes('沿用上一次')) return text;
-    const fallback = `${count} 项未从 API 获取有效白名单，沿用上次结果`;
-    return text ? `${text}；${fallback}` : fallback;
+function appendFallbackNote(note) {
+    const items = String(note || '').split('；').map(function(item) { return item.trim(); }).filter(Boolean);
+    if (!items.some(function(item) { return item.includes('沿用'); })) items.push('沿用上次数据');
+    return Array.from(new Set(items)).join('；');
 }
 
 function copySnapshotResults(results) {
@@ -1189,6 +1176,7 @@ function renderPanel(snapshot) {
         ? `${publicInfo.ip}${publicInfo.provider ? `（${publicInfo.provider}）` : ''}`
         : (publicInfo.error ? '查询失败' : '-');
     const carrier = publicInfo.carrier && publicInfo.carrier !== '-' ? publicInfo.carrier : '-';
+    const displayMeta = buildDisplayMeta(snapshot);
     const lines = [
         `API 请求结果: ${snapshot.summary || '失败'}`,
         `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
@@ -1198,13 +1186,13 @@ function renderPanel(snapshot) {
         `更新时间: ${formatDate(snapshot.updatedAt)}`
     ];
 
-    if (snapshot.note) lines.push(`说明: ${snapshot.note}`);
+    if (displayMeta.note) lines.push(`说明: ${displayMeta.note}`);
 
     (snapshot.results || []).forEach(function (result) {
         lines.push('');
         lines.push(`【${result.label}】`);
         lines.push(`请求结果: ${result.statusText || (result.success ? '成功' : '失败')}`);
-        if (result.detail) lines.push(`说明: ${result.detail}`);
+        if (result.detail && !displayMeta.hiddenDetails[result.detail]) lines.push(`说明: ${result.detail}`);
         if (result.error) lines.push(`错误: ${result.error}`);
         lines.push(`当前 IP: ${result.currentIp || '-'}`);
         lines.push('白名单:');
@@ -1221,6 +1209,37 @@ function renderPanel(snapshot) {
         title: `PO0 防火墙白名单 · ${snapshot.summary || '失败'}`,
         content: lines.join('\n'),
         style: snapshot.style || 'info'
+    };
+}
+
+function buildDisplayMeta(snapshot) {
+    const noteItems = String(snapshot && snapshot.note || '')
+        .split('；')
+        .map(function(item) { return item.trim(); })
+        .filter(Boolean);
+    const detailCounts = Object.create(null);
+    const hiddenDetails = Object.create(null);
+
+    (snapshot && Array.isArray(snapshot.results) ? snapshot.results : []).forEach(function(result) {
+        const detail = result && result.detail ? String(result.detail).trim() : '';
+        if (detail) detailCounts[detail] = (detailCounts[detail] || 0) + 1;
+    });
+
+    Object.keys(detailCounts).forEach(function(detail) {
+        const coveredByNote = noteItems.some(function(note) {
+            return note === detail || note.includes(detail) || detail.includes(note);
+        });
+        if (coveredByNote) {
+            hiddenDetails[detail] = true;
+        } else if (detailCounts[detail] > 1) {
+            noteItems.push(`${detail}（${detailCounts[detail]} 项）`);
+            hiddenDetails[detail] = true;
+        }
+    });
+
+    return {
+        note: Array.from(new Set(noteItems)).join('；'),
+        hiddenDetails
     };
 }
 
