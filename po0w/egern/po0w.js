@@ -11,6 +11,7 @@ const SCRIPT_NAME = 'PO0';
 const DEFAULT_HOST = '124.221.69.228';
 const REQUEST_TIMEOUT_MS = 10000;
 const PUBLIC_IP_TIMEOUT_MS = 4000;
+const DEFAULT_CACHE_MAX_AGE_HOURS = 6;
 const PUBLIC_IP_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 const STORE_PREFIX = 'po0w:firewall:egern';
 
@@ -92,19 +93,24 @@ async function runUpdate(ctx, cfg, env) {
             return Promise.resolve(createRequestFailure(item, groupName, item.error, false));
         }
         const previous = findCachedRequestResult(tokenCache, item);
-        const cachedSlotIP = previous && previous.cacheComparable !== false
+        const cacheExpired = Boolean(cfg.cacheDiff && !forceRefresh && previous &&
+            isTokenCacheExpired(previous.updatedAt, cfg.cacheMaxAgeHours));
+        const cachedSlotIP = previous && !cacheExpired
             ? getWhitelistSlotIP(previous, item.slot)
             : '';
         if (cfg.cacheDiff && !forceRefresh && publicInfo.ip && isSameIPAddress(publicInfo.ip, cachedSlotIP)) {
             return Promise.resolve(createCachedMatchResult(item, groupName, previous, publicInfo));
         }
-        return requestWhitelist(ctx, env, cfg.host, item, groupName);
+        return requestWhitelist(ctx, env, cfg.host, item, groupName).then(function(result) {
+            return markCacheExpiredResult(result, cacheExpired, cfg.cacheMaxAgeHours);
+        });
     });
     const results = await Promise.all(tasks);
     updateTokenCacheFromResults(ctx, env, tokenCache, selected, results);
     const successCount = results.filter(function(result) { return result.success; }).length;
     const failureCount = results.length - successCount;
     const cacheHitCount = results.filter(function(result) { return result.cacheHit; }).length;
+    const expiredCacheCount = results.filter(function(result) { return result.cacheExpired; }).length;
     const apiRequestCount = results.filter(function(result) { return result.apiRequested; }).length;
     const apiSuccessCount = results.filter(function(result) {
         return result.apiRequested && result.success;
@@ -127,6 +133,7 @@ async function runUpdate(ctx, cfg, env) {
     if (forceRefresh) notes.push('强制刷新');
     if (!cfg.cacheDiff && !forceRefresh) notes.push('缓存比较已关闭');
     if (cacheHitCount) notes.push(`${cacheHitCount} 个槽位 IP 未变化，已跳过写入`);
+    if (expiredCacheCount) notes.push(`${expiredCacheCount} 个 token 缓存超过 ${cfg.cacheMaxAgeHours} 小时，已强制更新`);
     if (apiRequestCount) notes.push(`${apiSuccessCount}/${apiRequestCount} 个写入请求成功`);
     if (!publicInfo.ip) notes.push('公网 IP 查询失败，未进行缓存比较');
 
@@ -158,7 +165,10 @@ function normalizeEnv(value) {
         cellular_tokens: String(env.cellular_tokens || ''),
         wifi_tokens: String(env.wifi_tokens || ''),
         skip_ssids: String(env.skip_ssids || ''),
-        cache_diff: String(env.cache_diff === null || typeof env.cache_diff === 'undefined' ? '' : env.cache_diff)
+        cache_diff: String(env.cache_diff === null || typeof env.cache_diff === 'undefined' ? '' : env.cache_diff),
+        cache_max_age_hours: String(env.cache_max_age_hours === null || typeof env.cache_max_age_hours === 'undefined'
+            ? ''
+            : env.cache_max_age_hours)
     };
 }
 
@@ -175,6 +185,7 @@ function buildConfig(env) {
         wifiTokens,
         skipSSIDs: parseList(env.skip_ssids),
         cacheDiff: parseBooleanArg(env.cache_diff, true),
+        cacheMaxAgeHours: parsePositiveNumberArg(env.cache_max_age_hours, DEFAULT_CACHE_MAX_AGE_HOURS),
         trigger: normalizeTrigger(env.trigger, env.mode)
     };
 }
@@ -185,6 +196,16 @@ function parseBooleanArg(value, defaultValue) {
     if (text === 'true') return true;
     if (text === 'false') return false;
     throw new Error('cache_diff 必须是 true 或 false');
+}
+
+function parsePositiveNumberArg(value, defaultValue) {
+    const text = cleanText(value);
+    if (!text) return Number(defaultValue);
+    const number = Number(text);
+    if (!Number.isFinite(number) || number <= 0) {
+        throw new Error('cache_max_age_hours 必须是大于 0 的数字');
+    }
+    return number;
 }
 
 function normalizeTrigger(trigger, mode) {
@@ -543,7 +564,8 @@ function findCachedRequestResult(cache, item) {
         whitelist: Array.isArray(entry.whitelist) && entry.whitelist.length
             ? normalizeWhitelist(entry.whitelist)
             : [{ slot: String(entry.slot || item.slot), ip: String(entry.ip) }],
-        cacheComparable: true
+        cacheComparable: true,
+        updatedAt: Number(entry.updatedAt || 0)
     };
 }
 
@@ -606,6 +628,21 @@ function isSameIPAddress(left, right) {
     const leftValue = cleanText(left).replace(/^\[|\]$/g, '').toLowerCase();
     const rightValue = cleanText(right).replace(/^\[|\]$/g, '').toLowerCase();
     return Boolean(leftValue) && leftValue === rightValue;
+}
+
+function isTokenCacheExpired(updatedAt, maxAgeHours) {
+    const timestamp = Number(updatedAt);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return true;
+    const age = Date.now() - timestamp;
+    return age < 0 || age > Number(maxAgeHours) * 60 * 60 * 1000;
+}
+
+function markCacheExpiredResult(result, expired, maxAgeHours) {
+    if (!expired || !result) return result;
+    result.cacheExpired = true;
+    const detail = `token 缓存超过 ${maxAgeHours} 小时，已忽略缓存比较并强制调用 API`;
+    result.detail = result.detail ? `${result.detail}；${detail}` : detail;
+    return result;
 }
 
 function createRequestFailure(item, groupName, error, apiRequested) {
@@ -918,7 +955,8 @@ function updateTokenCacheFromResults(ctx, env, cache, items, results) {
 
     items.forEach(function(item, index) {
         const result = results[index];
-        if (!item || !item.valid || !result || !result.success || result.cacheComparable === false) return;
+        if (!item || !item.valid || !result || !result.success ||
+            result.cacheComparable === false || result.whitelistReceived !== true) return;
         const slotIP = getWhitelistSlotIP(result, item.slot);
         if (!isValidIPAddress(slotIP)) return;
         const key = getTokenKey(item.token);

@@ -11,6 +11,7 @@ const SCRIPT_NAME = 'PO0W';
 const DEFAULT_HOST = '124.221.69.228';
 const REQUEST_TIMEOUT = 10;
 const PUBLIC_IP_TIMEOUT = 4;
+const DEFAULT_CACHE_MAX_AGE_HOURS = 6;
 const PUBLIC_IP_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 const STORE_PREFIX = 'po0w:firewall';
 const NETWORK_DEBUG = false;
@@ -84,21 +85,27 @@ async function runUpdate() {
         }
 
         const label = formatRequestLabel(groupName, item);
-        const previous = findSlotCacheResult(slotCache, item) ||
+        const cachedPrevious = findSlotCacheResult(slotCache, item);
+        const previous = cachedPrevious ||
             findPreviousRequestResultInSnapshot(previousSnapshot, item, label, false);
-        const cachedSlotIP = previous && previous.cacheComparable !== false
-            ? getWhitelistSlotIP(previous, item.slot)
+        const cacheExpired = Boolean(cfg.cacheDiff && !forceRefresh && cachedPrevious &&
+            isTokenCacheExpired(cachedPrevious.updatedAt, cfg.cacheMaxAgeHours));
+        const cachedSlotIP = cachedPrevious && !cacheExpired
+            ? getWhitelistSlotIP(cachedPrevious, item.slot)
             : '';
         if (cfg.cacheDiff && !forceRefresh && publicInfo.ip && isSameIPAddress(publicInfo.ip, cachedSlotIP)) {
             return Promise.resolve(createCachedMatchResult(item, groupName, previous, publicInfo));
         }
-        return requestWhitelist(cfg.host, item, groupName);
+        return requestWhitelist(cfg.host, item, groupName).then(function(result) {
+            return markCacheExpiredResult(result, cacheExpired, cfg.cacheMaxAgeHours);
+        });
     });
     const results = await Promise.all(tasks);
     updateSlotCacheFromResults(slotCache, selected, results);
     const successCount = results.filter(function (result) { return result.success; }).length;
     const failureCount = results.length - successCount;
     const cacheHitCount = results.filter(function (result) { return result.cacheHit; }).length;
+    const expiredCacheCount = results.filter(function (result) { return result.cacheExpired; }).length;
     const apiRequestCount = results.filter(function (result) { return result.apiRequested; }).length;
     const apiSuccessCount = results.filter(function (result) {
         return result.apiRequested && result.success;
@@ -121,6 +128,7 @@ async function runUpdate() {
     if (forceRefresh) notes.push('强制刷新');
     if (!cfg.cacheDiff && !forceRefresh) notes.push('缓存比较已关闭');
     if (cacheHitCount) notes.push(`${cacheHitCount} 个槽位 IP 未变化，已跳过写入`);
+    if (expiredCacheCount) notes.push(`${expiredCacheCount} 个 token 缓存超过 ${cfg.cacheMaxAgeHours} 小时，已强制更新`);
     if (apiRequestCount) notes.push(`${apiSuccessCount}/${apiRequestCount} 个写入请求成功`);
     if (!publicInfo.ip) notes.push('公网 IP 查询失败，未进行缓存比较');
 
@@ -220,6 +228,7 @@ function buildConfig(args) {
         wifiTokens,
         skipSSIDs: parseList(args.skip_ssids),
         cacheDiff: parseBooleanArg(args.cache_diff, true),
+        cacheMaxAgeHours: parsePositiveNumberArg(args.cache_max_age_hours, DEFAULT_CACHE_MAX_AGE_HOURS),
         trigger: args.trigger === 'cron'
             ? 'cron'
             : (args.trigger === 'panel' ? 'panel' : (args.trigger === 'manual' ? 'manual' : 'event'))
@@ -232,6 +241,16 @@ function parseBooleanArg(value, defaultValue) {
     if (text === 'true') return true;
     if (text === 'false') return false;
     throw new Error('cache_diff 必须是 true 或 false');
+}
+
+function parsePositiveNumberArg(value, defaultValue) {
+    const text = cleanText(value);
+    if (!text) return Number(defaultValue);
+    const number = Number(text);
+    if (!Number.isFinite(number) || number <= 0) {
+        throw new Error('cache_max_age_hours 必须是大于 0 的数字');
+    }
+    return number;
 }
 
 function isManualTrigger(trigger) {
@@ -686,9 +705,11 @@ function isAlreadyPinnedResponse(data) {
 
 function createAlreadyPinnedResult(item, groupName) {
     const label = formatRequestLabel(groupName, item);
+    const strictPrevious = findSlotCacheResult(readSlotCache(), item);
     const snapshot = readSnapshot();
-    const strictPrevious = findPreviousRequestResultInSnapshot(snapshot, item, label, false);
-    const previous = strictPrevious || findPreviousRequestResultInSnapshot(snapshot, item, label, true);
+    const previous = strictPrevious ||
+        findPreviousRequestResultInSnapshot(snapshot, item, label, false) ||
+        findPreviousRequestResultInSnapshot(snapshot, item, label, true);
     const hasPreviousData = previous && (
         (previous.currentIp && previous.currentIp !== '-') ||
         (Array.isArray(previous.whitelist) && previous.whitelist.length > 0)
@@ -786,6 +807,21 @@ function isSameIPAddress(left, right) {
     return Boolean(leftValue) && leftValue === rightValue;
 }
 
+function isTokenCacheExpired(updatedAt, maxAgeHours) {
+    const timestamp = Number(updatedAt);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return true;
+    const age = Date.now() - timestamp;
+    return age < 0 || age > Number(maxAgeHours) * 60 * 60 * 1000;
+}
+
+function markCacheExpiredResult(result, expired, maxAgeHours) {
+    if (!expired || !result) return result;
+    result.cacheExpired = true;
+    const detail = `token 缓存超过 ${maxAgeHours} 小时，已忽略缓存比较并强制调用 API`;
+    result.detail = result.detail ? `${result.detail}；${detail}` : detail;
+    return result;
+}
+
 function createRequestFailure(item, groupName, error, apiRequested) {
     return {
         label: formatRequestLabel(groupName, item),
@@ -879,7 +915,8 @@ function findSlotCacheResult(cache, item) {
     return {
         currentIp: entry.currentIp || entry.ip,
         whitelist,
-        cacheComparable: true
+        cacheComparable: true,
+        updatedAt: Number(entry.updatedAt || 0)
     };
 }
 
@@ -891,7 +928,8 @@ function updateSlotCacheFromResults(cache, items, results) {
 
     items.forEach(function (item, index) {
         const result = results[index];
-        if (!item || !item.valid || !result || !result.success || result.cacheComparable === false) return;
+        if (!item || !item.valid || !result || !result.success ||
+            result.cacheComparable === false || result.whitelistReceived !== true) return;
         const slotIP = getWhitelistSlotIP(result, item.slot);
         if (!isValidIPAddress(slotIP)) return;
         const key = getSlotCacheEntryKey(item);
