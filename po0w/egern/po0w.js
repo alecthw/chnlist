@@ -405,6 +405,13 @@ function isValidIPAddress(value) {
     });
 }
 
+function isValidWhitelistCIDR(value) {
+    const text = cleanText(value);
+    if (!text.endsWith('/24')) return false;
+    const networkIP = text.substring(0, text.length - 3);
+    return networkIP.split('.').length === 4 && isValidIPAddress(networkIP);
+}
+
 // ============================================================
 // API 请求
 // ============================================================
@@ -552,7 +559,7 @@ function findCachedRequestResult(cache, item) {
     const entries = cache && cache.entries && typeof cache.entries === 'object' ? cache.entries : {};
     const tokenKey = getTokenKey(item.token);
     const entry = entries[tokenKey];
-    if (!entry || !isValidIPAddress(entry.ip)) return null;
+    if (!entry || !isValidWhitelistCIDR(entry.ip)) return null;
     return {
         tokenKey,
         currentIp: entry.currentIp || '-',
@@ -620,9 +627,13 @@ function getWhitelistSlotIP(result, slot) {
 }
 
 function isSameIPAddress(left, right) {
-    const leftValue = cleanText(left).replace(/^\[|\]$/g, '').toLowerCase();
-    const rightValue = cleanText(right).replace(/^\[|\]$/g, '').toLowerCase();
-    return Boolean(leftValue) && leftValue === rightValue;
+    const publicIP = cleanText(left);
+    const cachedCIDR = cleanText(right);
+    if (publicIP.split('.').length !== 4 || !isValidIPAddress(publicIP) || !isValidWhitelistCIDR(cachedCIDR)) {
+        return false;
+    }
+    const networkIP = cachedCIDR.substring(0, cachedCIDR.length - 3);
+    return publicIP.split('.').slice(0, 3).join('.') === networkIP.split('.').slice(0, 3).join('.');
 }
 
 function isTokenCacheExpired(updatedAt, maxAgeHours) {
@@ -948,7 +959,7 @@ function updateTokenCacheFromResults(ctx, env, cache, items, results) {
         if (!item || !item.valid || !result || !result.success || result.apiRequested !== true ||
             result.cacheComparable === false || result.whitelistReceived !== true) return;
         const slotIP = getWhitelistSlotIP(result, item.slot);
-        if (!isValidIPAddress(slotIP)) return;
+        if (!isValidWhitelistCIDR(slotIP)) return;
         const key = getTokenKey(item.token);
         if (result.cacheHit && value.entries[key]) return;
         value.entries[key] = {
@@ -976,7 +987,7 @@ function migrateLegacyTokenCache(snapshot) {
         if (!key || cache.entries[key]) return;
         const slot = result.slot === null || typeof result.slot === 'undefined' ? '?' : String(result.slot);
         const slotIP = getWhitelistSlotIP(result, slot);
-        if (!isValidIPAddress(slotIP)) return;
+        if (!isValidWhitelistCIDR(slotIP)) return;
         cache.entries[key] = {
             slot,
             ip: slotIP,

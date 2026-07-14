@@ -24,7 +24,7 @@ env_schema:
     default_value: Home|Office
   cache_diff:
     name: 缓存比较
-    description: true 时公网 IP 与 token 缓存中对应 slot 一致则跳过写入；false 时直接写入。公网 IP 始终查询
+    description: true 时公网 IP 属于 token 缓存中对应 slot 的 /24 网段则跳过写入；false 时直接写入。公网 IP 始终查询
     default_value: true
   cache_max_age_hours:
     name: 缓存有效时间

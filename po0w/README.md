@@ -24,7 +24,7 @@
 - 根据当前网络环境自动选择蜂窝或非蜂窝 token 组；Wi-Fi、有线网卡及其他接口均属于非蜂窝。
 - 支持一个网络配置多个 `token@slot_id`，并汇总展示全部请求结果。
 - 支持指定自动更新时需要跳过的 Wi-Fi SSID。
-- 自动更新会先通过 `DIRECT` 查询公网 IP；如果与未过期缓存中当前 slot 的 IP 一致，则不调用写入 API。客户端缓存默认 6 小时过期。
+- 自动更新会先通过 `DIRECT` 查询公网 IP；如果公网 IP 属于未过期缓存中当前 slot 的 `/24` 网段，则不调用写入 API。客户端缓存默认 6 小时过期。
 - Surge iOS 可点击 Panel 刷新按钮立即更新；Stash 可点击 Tile 手动刷新；Egern、Loon 与 Quantumult X 提供独立的手动更新脚本。
 - 所有白名单 API 请求以及公网 IP 查询强制使用客户端的 `DIRECT` 策略。
 - Panel、Tile、Widget、通知和交互结果页展示公网 IP、查询来源缩写、运营商地区、当前 IP 和完整白名单。
@@ -54,7 +54,7 @@ chmod +x /root/update-po0-whitelist.sh
 */5 * * * * /root/update-po0-whitelist.sh > /root/update-po0-whitelist.log 2>&1
 ```
 
-`CACHE_MAX_AGE_HOURS` 设置缓存最长有效时间，单位为小时，默认值为 `12`。`CACHE_DIFF=true` 时，公网 IPv4 与 `/tmp/po0w-currentip-slot-<SLOT>` 中的缓存一致且缓存未超过该时间，便跳过白名单 API；缓存过期后会强制更新。设为 `false` 时仍查询公网 IP，但每次均调用 API。只有 API 成功返回有效 `currentIp` 后才会同时更新缓存 IP 和 Unix 时间戳。
+`CACHE_MAX_AGE_HOURS` 设置缓存最长有效时间，单位为小时，默认值为 `12`。`CACHE_DIFF=true` 时，公网 IPv4 属于 `/tmp/po0w-currentip-slot-<SLOT>` 中缓存的 `/24` 网段且缓存未超过该时间，便跳过白名单 API；缓存过期后会强制更新。设为 `false` 时仍查询公网 IP，但每次均调用 API。只有 API 成功返回有效的 `/24 currentIp` 后才会同时更新缓存和 Unix 时间戳。
 
 需要手动强制刷新时执行：
 
@@ -124,7 +124,7 @@ Quantumult X 没有公开 Surge 式主接口字段。本实现优先将非空 SS
 | `cellular_tokens` | 二选一 | 蜂窝网络使用的 token，格式为 `token@slot_id` |
 | `wifi_tokens` | 二选一 | Wi-Fi、有线网卡及其他非蜂窝网络使用的 token，格式为 `token@slot_id`；Loon 或 Quantumult X 无法确认蜂窝时也使用此组 |
 | `skip_ssids` | 否 | 自动更新时需要跳过的 Wi-Fi SSID，多个 SSID 使用竖线分隔 |
-| `cache_diff` | 否 | `true` 时比较公网 IP 与 token 白名单缓存中的对应 slot，相同则跳过写入；`false` 时直接调用白名单 API。默认 `true` |
+| `cache_diff` | 否 | `true` 时检查公网 IP 是否属于 token 白名单缓存中对应 slot 的 `/24` 网段，属于则跳过写入；`false` 时直接调用白名单 API。默认 `true` |
 | `cache_max_age_hours` | 否 | token 缓存最长有效时间，单位小时；超过后忽略缓存比较并强制调用 API。默认 `6`，必须大于 `0` |
 
 `cellular_tokens` 和 `wifi_tokens` 不能同时为空。每组可以配置多个 token，使用 `|` 分隔：
@@ -171,7 +171,9 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 
 请求强制使用 `DIRECT`，确保服务器识别到当前蜂窝或非蜂窝网络的真实公网出口 IP。
 
-各客户端的自动任务会先通过 `126`、`BILI`、`IPIP` 三个来源依次查询公网 IP，所有查询同样强制使用 `DIRECT`。取得公网 IP 后，脚本按当前 `token` 找到共享的白名单缓存，再读取其中对应 slot 的 IP；如果缓存未过期且缓存 IP 与公网 IP 一致，该 token 显示为“无需更新”，不会调用白名单写入 API。缓存时间缺失、系统时间倒退或缓存超过 `cache_max_age_hours` 时，会忽略 IP 比较并强制调用白名单 API。公网 IP 查询失败时也会继续调用写入 API，避免第三方查询服务异常造成漏更新。
+服务端会将公网 IP 转换为 `/24` 网段保存，API 返回的 `currentIp` 和 `whitelist[].ip` 均为 CIDR，例如 `180.102.51.0/24`。客户端缓存比较只判断查询到的公网 IPv4 是否属于该网段，不兼容旧的单 IP 白名单缓存；升级后首次自动运行会调用 API 重建缓存。
+
+各客户端的自动任务会先通过 `126`、`BILI`、`IPIP` 三个来源依次查询公网 IP，所有查询同样强制使用 `DIRECT`。取得公网 IP 后，脚本按当前 `token` 找到共享的白名单缓存，再读取其中对应 slot 的 `/24` 网段；如果缓存未过期且公网 IP 属于该网段，本轮显示为“未请求（IP 未变化）”，不会调用白名单写入 API。缓存时间缺失、系统时间倒退或缓存超过 `cache_max_age_hours` 时，会忽略网段比较并强制调用白名单 API。公网 IP 查询失败时也会继续调用写入 API，避免第三方查询服务异常造成漏更新。
 
 `cache_diff` 只控制是否执行上述缓存比较。设为 `false` 时，网络变化和定时任务仍会查询并展示公网 IP 与运营商，但会跳过比较步骤，直接调用所有有效 token 的白名单写入 API。`cache_max_age_hours` 只在 `cache_diff=true` 的自动任务中生效；手动刷新本身就是强制更新，不受缓存时间影响。
 
@@ -190,18 +192,16 @@ GET https://<host>/api/firewall/<token>/add?slot=<slot_id>
 Surge iOS Panel、Stash Tile、Egern Widget、Loon 最近结果通知，以及 Quantumult X 交互结果页会展示最近一次请求的：
 
 - API 请求结果和当时的网络环境。
-- 公网 IP 后使用括号标注查询来源 `126`、`BILI` 或 `IPIP`。
-- 地区与运营商格式例如“上海联通”“江苏苏州电信”“浙江杭州移动”。
+- 公网 IP 后使用括号标注查询来源 `126`、`BILI` 或 `IPIP`，并在同一行展示“上海联通”“江苏苏州电信”“浙江杭州移动”等运营商地区。
 - 触发方式与结果时间。
-- 每个 `token@slot_id` 对应请求的成功或失败状态。
-- 当前 IP。
-- 白名单，格式为 `slot: IP`。
+- 每个 `token@slot_id` 对应的 API 当前网段。
+- 白名单，格式为 `slot: CIDR`。
 
 蜂窝和非蜂窝网络不会分别保存结果，所有网络共用同一份最近结果快照。新的有效白名单按相同 token 覆盖当前展示；未取得白名单的项目继续沿用该 token 的上一次当前 IP 和白名单。匹配不到相同 token 且没有上一次结果时，才展示本次空结果或错误。
 
 所有客户端统一使用两份持久化数据：`snapshot` 只保存最近展示的网络环境、公网 IP、运营商和本次结果；`token-cache` 只保存用于比较的完整白名单。API 失败不会修改 `token-cache`，命中 `skip_ssids` 时继续沿用 `snapshot` 中上一次的展示结果。
 
-`token-cache` 使用 `token` 哈希定位，相同 token 即使配置不同 slot 也共享同一份缓存，比较时再从完整白名单中读取当前 slot；缓存不区分蜂窝和非蜂窝，也不保存原始 token。每个条目的 `updatedAt` 只在 API 成功返回有效 `whitelist` 后刷新，缓存命中、403 或失败结果不会延长有效期。用于隔离不同模块配置的存储键只包含配置哈希。Egern、Stash、Loon 和 Quantumult X 升级后会自动将旧快照中的 `lastUsableResults` 迁移到独立缓存，新的快照不再保存 `lastRequestResults` 和 `lastUsableResults`。
+`token-cache` 使用 `token` 哈希定位，相同 token 即使配置不同 slot 也共享同一份缓存，比较时再从完整白名单中读取当前 slot 的 `/24` 网段；缓存不区分蜂窝和非蜂窝，也不保存原始 token。每个条目的 `updatedAt` 只在 API 成功返回有效 `whitelist` 后刷新，缓存命中、403 或失败结果不会延长有效期。用于隔离不同模块配置的存储键只包含配置哈希。旧的单 IP 缓存不会继续使用，新的快照也不再保存 `lastRequestResults` 和 `lastUsableResults`。
 
 ## 注意事项
 

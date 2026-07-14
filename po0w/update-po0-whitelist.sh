@@ -53,6 +53,20 @@ is_ipv4() {
     return 0
 }
 
+is_ipv4_cidr24() {
+    case "$1" in
+        */24) is_ipv4 "${1%/24}" ;;
+        *) return 1 ;;
+    esac
+}
+
+same_c_segment() {
+    public_prefix="${1%.*}"
+    network_ip="${2%/24}"
+    network_prefix="${network_ip%.*}"
+    [ "$public_prefix" = "$network_prefix" ]
+}
+
 if [ -z "$TOKEN" ]; then
     log "ERROR: TOKEN is empty"
     exit 1
@@ -135,7 +149,7 @@ CACHE_UPDATED_AT=""
 if [ -f "$CACHE_FILE" ]; then
     CACHED_IP="$(sed -n '1p' "$CACHE_FILE")"
     CACHE_UPDATED_AT="$(sed -n '2p' "$CACHE_FILE")"
-    if ! is_ipv4 "$CACHED_IP"; then
+    if ! is_ipv4_cidr24 "$CACHED_IP"; then
         CACHED_IP=""
     fi
 fi
@@ -158,8 +172,8 @@ esac
 if [ "$FORCE_UPDATE" = "false" ] \
     && [ "$CACHE_DIFF" = "true" ] \
     && [ "$CACHE_EXPIRED" = "false" ] \
-    && [ "$PUBLIC_IP" = "$CACHED_IP" ]; then
-    log "SKIP: public IP unchanged: $PUBLIC_IP"
+    && same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
+    log "SKIP: public IP $PUBLIC_IP is already covered by $CACHED_IP"
     exit 0
 fi
 
@@ -169,8 +183,8 @@ elif [ "$CACHE_DIFF" = "false" ]; then
     log "INFO: cache comparison disabled; public IP: $PUBLIC_IP"
 elif [ -z "$CACHED_IP" ]; then
     log "INFO: no valid cache; public IP: $PUBLIC_IP"
-elif [ "$PUBLIC_IP" != "$CACHED_IP" ]; then
-    log "INFO: public IP changed: $CACHED_IP -> $PUBLIC_IP"
+elif ! same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
+    log "INFO: public IP $PUBLIC_IP is outside cached network $CACHED_IP"
 elif [ -z "$CACHE_UPDATED_AT" ]; then
     log "INFO: cache timestamp missing; forcing update"
 elif [ "$CACHE_EXPIRED" = "true" ]; then
@@ -192,8 +206,8 @@ if [ "$STATUS" -ne 0 ]; then
     exit 1
 fi
 
-API_CURRENT_IP="$(printf '%s' "$RESPONSE" | tr -d '\r\n' | sed -n 's/.*"currentIp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-if ! is_ipv4 "$API_CURRENT_IP"; then
+API_CURRENT_IP="$(printf '%s' "$RESPONSE" | tr -d '\r\n' | sed -n 's/.*"currentIp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | tr -d '\\')"
+if ! is_ipv4_cidr24 "$API_CURRENT_IP"; then
     log "ERROR: API response does not contain a valid currentIp: $RESPONSE"
     exit 1
 fi
