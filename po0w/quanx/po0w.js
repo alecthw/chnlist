@@ -117,14 +117,14 @@ async function runUpdate() {
             return Promise.resolve(createRequestFailure(item, groupName, item.error, false));
         }
         const previous = findCachedRequestResult(tokenCache, item);
-        const cacheExpired = Boolean(cfg.cacheDiff && !forceRefresh && previous &&
+        const cacheExpired = Boolean(cfg.cacheDiffMode > 0 && !forceRefresh && previous &&
             isTokenCacheExpired(previous.updatedAt, cfg.cacheMaxAgeHours));
-        const cacheMatched = Boolean(cfg.cacheDiff && !forceRefresh && publicInfo.ip &&
-            previous && !cacheExpired && (cfg.cacheDiffOnlyCurrentSlot
+        const cacheMatched = Boolean(cfg.cacheDiffMode > 0 && !forceRefresh && publicInfo.ip &&
+            previous && !cacheExpired && (cfg.cacheDiffMode === 1
                 ? isSameIPAddress(publicInfo.ip, getWhitelistSlotIP(previous, item.slot))
                 : hasWhitelistIPAddress(previous, publicInfo.ip)));
         if (cacheMatched) {
-            const cacheStatus = cfg.cacheDiffOnlyCurrentSlot ? 'IP 未变化' : 'IP 已存在';
+            const cacheStatus = cfg.cacheDiffMode === 1 ? 'IP 未变化' : 'IP 已存在';
             return Promise.resolve(createCachedMatchResult(item, groupName, previous, cacheStatus));
         }
         return requestWhitelist(cfg.host, item, groupName).then(function(result) {
@@ -141,7 +141,7 @@ async function runUpdate() {
     const allCacheHits = results.length > 0 && results.every(function(result) { return result && result.cacheHit; });
 
     if (allCacheHits) {
-        summary = cfg.cacheDiffOnlyCurrentSlot ? '未请求（IP 未变化）' : '未请求（IP 已存在）';
+        summary = cfg.cacheDiffMode === 1 ? '未请求（IP 未变化）' : '未请求（IP 已存在）';
     } else if (successCount === 0) {
         status = 'failure';
         summary = '失败';
@@ -151,7 +151,6 @@ async function runUpdate() {
     }
 
     const notes = [];
-    if (!cfg.cacheDiff && !forceRefresh) notes.push('缓存比较已关闭');
     if (expiredCacheCount) notes.push(`${expiredCacheCount} 项缓存过期`);
 
     const snapshot = createSnapshot({
@@ -231,23 +230,17 @@ function buildConfig(args) {
         cellularTokens,
         wifiTokens,
         skipSSIDs: parseList(args.skip_ssids),
-        cacheDiff: parseBooleanArg(args.cache_diff, true, 'cache_diff'),
-        cacheDiffOnlyCurrentSlot: parseBooleanArg(
-            args.cache_diff_only_current_slot,
-            true,
-            'cache_diff_only_current_slot'
-        ),
+        cacheDiffMode: parseCacheDiffMode(args.cache_diff),
         cacheMaxAgeHours: parsePositiveNumberArg(args.cache_max_age_hours, DEFAULT_CACHE_MAX_AGE_HOURS),
         trigger: normalizeTrigger(args.trigger, args.mode)
     };
 }
 
-function parseBooleanArg(value, defaultValue, name) {
-    const text = cleanText(value).toLowerCase();
-    if (!text) return Boolean(defaultValue);
-    if (text === 'true') return true;
-    if (text === 'false') return false;
-    throw new Error(`${name || 'cache_diff'} 必须是 true 或 false`);
+function parseCacheDiffMode(value) {
+    const text = cleanText(value);
+    if (!text) return 0;
+    if (text === '0' || text === '1' || text === '2') return Number(text);
+    throw new Error('cache_diff 必须是 0、1 或 2');
 }
 
 function parsePositiveNumberArg(value, defaultValue) {
@@ -1322,7 +1315,7 @@ if (typeof module !== 'undefined' && module.exports) {
         parseSourcePath,
         parseEnvironmentVariables,
         buildConfig,
-        parseBooleanArg,
+        parseCacheDiffMode,
         normalizeHost,
         parseTokenList,
         parseList,
