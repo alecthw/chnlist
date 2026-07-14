@@ -46,7 +46,7 @@ async function runUpdate() {
     if (skippedSSID && !isManualTrigger(cfg.trigger)) {
         const snapshot = createSkippedSnapshot(network, cfg.trigger);
         writeSnapshot(snapshot);
-        console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
+        console.log(`[${SCRIPT_NAME}] ${network.label}：${snapshot.summary}${snapshot.note ? `，${snapshot.note}` : ''}`);
         return snapshot;
     }
 
@@ -63,16 +63,16 @@ async function runUpdate() {
     if (!selected.length) {
         const snapshot = createSnapshot({
             status: 'success',
-            summary: '成功',
+            summary: '未请求（未配置 Token）',
             style: 'info',
             network,
             trigger: cfg.trigger,
-            note: `未配置 ${network.type === 'wifi' ? 'wifi_tokens' : 'cellular_tokens'}，无需请求`,
+            note: '',
             publicInfo,
             results: []
         });
         writeSnapshot(snapshot);
-        console.log(`[${SCRIPT_NAME}] ${snapshot.note}`);
+        console.log(`[${SCRIPT_NAME}] ${network.label}：${snapshot.summary}`);
         return snapshot;
     }
 
@@ -108,8 +108,12 @@ async function runUpdate() {
     let status = 'success';
     let summary = '成功';
     let style = 'good';
+    const allCacheHits = results.length > 0 && results.every(function(result) { return result && result.cacheHit; });
 
-    if (successCount === 0) {
+    if (allCacheHits) {
+        summary = '未请求（IP 未变化）';
+        style = 'info';
+    } else if (successCount === 0) {
         status = 'failure';
         summary = '失败';
         style = 'error';
@@ -153,11 +157,10 @@ async function runPanel() {
             const network = getNetworkInfo();
             finishPanel({
                 title: 'PO0 防火墙白名单',
-                content: [
+        content: [
                     'API 请求结果: 暂无',
                     `当前网络环境: ${network.label}`,
                     '公网 IP: 暂无',
-                    '运营商: 暂无',
                     '点击刷新按钮可手动更新'
                 ].join('\n'),
                 style: 'info'
@@ -353,10 +356,10 @@ function getNetworkInfo() {
         ssid,
         interfaces,
         label: ssid
-            ? `Wi-Fi（SSID: ${ssid}）`
+            ? `Wi-Fi（${ssid}）`
             : (interfaces.length
-                ? `非蜂窝网络（接口: ${interfaces.join(' / ')}）`
-                : '非蜂窝网络（接口未知）')
+                ? `非蜂窝（${interfaces.join(' / ')}）`
+                : '非蜂窝')
     };
 }
 
@@ -717,8 +720,8 @@ function createAlreadyPinnedResult(item, groupName) {
         whitelistReceived: false,
         statusText: 'IP 已在其他 slot',
         detail: hasPreviousData
-            ? '沿用上次数据'
-            : '暂无白名单数据',
+            ? 'IP 已在其他 slot，沿用上次数据'
+            : 'IP 已在其他 slot，暂无白名单数据',
         error: '',
         currentIp: hasPreviousData && previous.currentIp ? previous.currentIp : '-',
         whitelist: hasPreviousData && Array.isArray(previous.whitelist) ? previous.whitelist : []
@@ -989,24 +992,26 @@ function createSnapshot(options) {
 
 function createSkippedSnapshot(network, trigger) {
     const previous = readSnapshot();
-    const note = '命中 skip_ssids，未发起请求';
     const hasPreviousResults = previous && Array.isArray(previous.results) && previous.results.length > 0;
     if (!hasPreviousResults) {
         return createSnapshot({
             status: 'success',
-            summary: '成功',
+            summary: '已跳过（命中 skip_ssids）',
             style: 'info',
             network,
             trigger,
-            note: `${note}；暂无历史结果`,
+            note: '暂无历史结果',
             results: []
         });
     }
 
     return Object.assign({}, previous, {
+        status: 'success',
+        summary: '已跳过（命中 skip_ssids）',
+        style: 'info',
         network,
         trigger,
-        note
+        note: ''
     });
 }
 
@@ -1085,7 +1090,7 @@ function getSnapshotResultTokenKey(result) {
 
 function appendFallbackDetail(result) {
     if (result && result.cacheHit) return result.detail ? String(result.detail) : '';
-    if (result && result.statusText === '已存在' && result.detail) {
+    if (result && (result.statusText === '已存在' || result.statusText === 'IP 已在其他 slot') && result.detail) {
         return String(result.detail);
     }
     return '沿用上次数据';
@@ -1176,12 +1181,12 @@ function renderPanel(snapshot) {
         ? `${publicInfo.ip}${publicInfo.provider ? `（${publicInfo.provider}）` : ''}`
         : (publicInfo.error ? '查询失败' : '-');
     const carrier = publicInfo.carrier && publicInfo.carrier !== '-' ? publicInfo.carrier : '-';
+    const publicIPWithCarrier = carrier !== '-' ? `${publicIP} ${carrier}` : publicIP;
     const displayMeta = buildDisplayMeta(snapshot);
     const lines = [
         `API 请求结果: ${snapshot.summary || '失败'}`,
         `当前网络环境: ${snapshot.network && snapshot.network.label ? snapshot.network.label : '未知'}`,
-        `公网 IP: ${publicIP}`,
-        `运营商: ${carrier}`,
+        `公网 IP: ${publicIPWithCarrier}`,
         `触发方式: ${triggerLabel}`,
         `更新时间: ${formatDate(snapshot.updatedAt)}`
     ];
@@ -1191,7 +1196,6 @@ function renderPanel(snapshot) {
     (snapshot.results || []).forEach(function (result) {
         lines.push('');
         lines.push(`【${result.label}】`);
-        lines.push(`请求结果: ${result.statusText || (result.success ? '成功' : '失败')}`);
         if (result.detail && !displayMeta.hiddenDetails[result.detail]) lines.push(`说明: ${result.detail}`);
         if (result.error) lines.push(`错误: ${result.error}`);
         lines.push(`当前 IP: ${result.currentIp || '-'}`);
