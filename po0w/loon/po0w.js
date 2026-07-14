@@ -99,11 +99,13 @@ async function runUpdate(root, args, cfg) {
         const previous = findCachedRequestResult(tokenCache, item);
         const cacheExpired = Boolean(cfg.cacheDiff && !forceRefresh && previous &&
             isTokenCacheExpired(previous.updatedAt, cfg.cacheMaxAgeHours));
-        const cachedSlotIP = previous && !cacheExpired
-            ? getWhitelistSlotIP(previous, item.slot)
-            : '';
-        if (cfg.cacheDiff && !forceRefresh && publicInfo.ip && isSameIPAddress(publicInfo.ip, cachedSlotIP)) {
-            return Promise.resolve(createCachedMatchResult(item, groupName, previous));
+        const cacheMatched = Boolean(cfg.cacheDiff && !forceRefresh && publicInfo.ip &&
+            previous && !cacheExpired && (cfg.cacheDiffOnlyCurrentSlot
+                ? isSameIPAddress(publicInfo.ip, getWhitelistSlotIP(previous, item.slot))
+                : hasWhitelistIPAddress(previous, publicInfo.ip)));
+        if (cacheMatched) {
+            const cacheStatus = cfg.cacheDiffOnlyCurrentSlot ? 'IP 未变化' : 'IP 已存在';
+            return Promise.resolve(createCachedMatchResult(item, groupName, previous, cacheStatus));
         }
         return requestWhitelist(root, args, cfg.host, item, groupName).then(function(result) {
             return markCacheExpiredResult(result, cacheExpired);
@@ -120,7 +122,7 @@ async function runUpdate(root, args, cfg) {
     const allCacheHits = results.length > 0 && results.every(function(result) { return result && result.cacheHit; });
 
     if (allCacheHits) {
-        summary = '未请求（IP 未变化）';
+        summary = cfg.cacheDiffOnlyCurrentSlot ? '未请求（IP 未变化）' : '未请求（IP 已存在）';
         style = 'info';
     } else if (successCount === 0) {
         status = 'failure';
@@ -253,18 +255,23 @@ function buildConfig(args, trigger) {
         cellularTokens,
         wifiTokens,
         skipSSIDs: parseList(value.skip_ssids),
-        cacheDiff: parseBooleanArg(value.cache_diff, true),
+        cacheDiff: parseBooleanArg(value.cache_diff, true, 'cache_diff'),
+        cacheDiffOnlyCurrentSlot: parseBooleanArg(
+            value.cache_diff_only_current_slot,
+            true,
+            'cache_diff_only_current_slot'
+        ),
         cacheMaxAgeHours: parsePositiveNumberArg(value.cache_max_age_hours, DEFAULT_CACHE_MAX_AGE_HOURS),
         trigger: trigger || 'event'
     };
 }
 
-function parseBooleanArg(value, defaultValue) {
+function parseBooleanArg(value, defaultValue, name) {
     const text = cleanText(value).toLowerCase();
     if (!text) return Boolean(defaultValue);
     if (text === 'true') return true;
     if (text === 'false') return false;
-    throw new Error('cache_diff 必须是 true 或 false');
+    throw new Error(`${name || 'cache_diff'} 必须是 true 或 false`);
 }
 
 function parsePositiveNumberArg(value, defaultValue) {
@@ -736,7 +743,7 @@ function createAlreadyPinnedResult(root, args, item, groupName) {
     };
 }
 
-function createCachedMatchResult(item, groupName, previous) {
+function createCachedMatchResult(item, groupName, previous, statusText) {
     return {
         label: formatRequestLabel(groupName, item),
         requestKey: getRequestKey(item.token),
@@ -746,7 +753,7 @@ function createCachedMatchResult(item, groupName, previous) {
         cacheHit: true,
         cacheComparable: true,
         whitelistReceived: false,
-        statusText: 'IP 未变化',
+        statusText: statusText || 'IP 未变化',
         detail: '',
         error: '',
         currentIp: previous && previous.currentIp ? previous.currentIp : '-',
@@ -823,6 +830,12 @@ function getWhitelistSlotIP(result, slot) {
         return value && String(value.slot) === targetSlot;
     });
     return entry && entry.ip ? String(entry.ip).trim() : '';
+}
+
+function hasWhitelistIPAddress(result, address) {
+    return Boolean(result && Array.isArray(result.whitelist)) && result.whitelist.some(function(entry) {
+        return entry && isSameIPAddress(address, entry.ip);
+    });
 }
 
 function isSameIPAddress(left, right) {

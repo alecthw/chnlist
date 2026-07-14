@@ -24,7 +24,11 @@ env_schema:
     default_value: Home|Office
   cache_diff:
     name: 缓存比较
-    description: true 时公网 IP 属于 token 缓存中对应 slot 的 /24 网段则跳过写入；false 时直接写入。公网 IP 始终查询
+    description: true 时查询 token 白名单缓存后决定是否写入；false 时直接写入。公网 IP 始终查询
+    default_value: true
+  cache_diff_only_current_slot:
+    name: 仅比较当前 Slot
+    description: true 仅比较当前 slot；false 比较该 token 缓存中的所有 slot，只要公网 IP 已存在就跳过写入
     default_value: true
   cache_max_age_hours:
     name: 缓存有效时间
@@ -44,6 +48,7 @@ scriptings:
         wifi_tokens: ''
         skip_ssids: ''
         cache_diff: ''
+        cache_diff_only_current_slot: ''
         cache_max_age_hours: ''
 
   - schedule:
@@ -59,6 +64,7 @@ scriptings:
         wifi_tokens: ''
         skip_ssids: ''
         cache_diff: ''
+        cache_diff_only_current_slot: ''
         cache_max_age_hours: ''
 
   - generic:
@@ -73,6 +79,7 @@ scriptings:
         wifi_tokens: ''
         skip_ssids: ''
         cache_diff: ''
+        cache_diff_only_current_slot: ''
         cache_max_age_hours: ''
 
   - generic:
@@ -87,6 +94,7 @@ scriptings:
         wifi_tokens: ''
         skip_ssids: ''
         cache_diff: ''
+        cache_diff_only_current_slot: ''
         cache_max_age_hours: ''
 
 widgets:
