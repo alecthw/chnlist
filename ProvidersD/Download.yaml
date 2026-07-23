@@ -1,0 +1,3 @@
+payload:
+  - DOMAIN-SUFFIX,smtp
+  - DOMAIN-KEYWORD,aria2

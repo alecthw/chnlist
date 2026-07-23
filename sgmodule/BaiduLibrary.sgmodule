@@ -1,0 +1,13 @@
+#!name=百度文库
+#!desc=
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf
+
+[URL Rewrite]
+^https:\/\/appwk\.baidu\.com\/(naapi\/(recommend\/recommenddoc|wkcircle\/messagetab|search\/wkhotwords|api\/wmadopt)|appapi\/(search\/hot|donate\/detail)|xpage\/interface\/wknaad) _ reject
+
+[Script]
+百度文库-2 = type=http-response,pattern=^https:\/\/appwk\.baidu\.com\/naapi\/(user\/getinfo|doc\/getdocdownloadcopywriter),requires-body=1,script-path=https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduLibrary.conf
+
+[MITM]
+hostname = %APPEND% appwk.baidu.com
