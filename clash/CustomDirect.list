@@ -70,7 +70,9 @@ DOMAIN-SUFFIX,central-world.org
 DOMAIN-SUFFIX,parkson-market.org
 DOMAIN-SUFFIX,tagxx.vip
 DOMAIN-SUFFIX,tagweb.vip
+DOMAIN-SUFFIX,tagss-verification.org
 DOMAIN-WILDCARD,tagss*.pro
+DOMAIN-WILDCARD,*.tagss*.pro
 DOMAIN-SUFFIX,xmtzapp.cc
 DOMAIN-WILDCARD,*.xiaomisub*.cc
 DOMAIN-SUFFIX,xjkpapp.cc
