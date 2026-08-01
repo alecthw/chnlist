@@ -15,20 +15,54 @@ clash_support_types = [
     "DOMAIN",
     "DOMAIN-SUFFIX",
     "DOMAIN-KEYWORD",
-    "GEOIP",
-    "IP-CIDR",
-    "IP-CIDR6",
-    "SRC-IP-CIDR",
-    "SRC-PORT",
-    "DST-PORT",
-    # "PROCESS-NAME",
-    # "MATCH",
-]
+    "DOMAIN-WILDCARD",
+    "GEOSITE",
 
-clash_ip_types = [
-    "GEOIP",
     "IP-CIDR",
     "IP-CIDR6",
+    "IP-SUFFIX",
+    "IP-ASN",
+    "GEOIP",
+
+    "SRC-GEOIP",
+    "SRC-IP-ASN",
+    "SRC-IP-CIDR",
+    "SRC-IP-SUFFIX",
+
+    "DST-PORT",
+    "SRC-PORT",
+
+    "IN-PORT",
+    "IN-TYPE",
+    "IN-USER",
+    "IN-NAME",
+    "REMATCH-NAME",
+
+    "PROCESS-PATH",
+    "PROCESS-PATH",
+    "PROCESS-PATH-WILDCARD",
+    "PROCESS-PATH-REGEX",
+    "PROCESS-PATH-REGEX",
+
+    "PROCESS-NAME",
+    "PROCESS-NAME",
+    "PROCESS-NAME",
+    "PROCESS-NAME-WILDCARD",
+    "PROCESS-NAME-REGEX",
+    "PROCESS-NAME-REGEX",
+    "PROCESS-NAME-REGEX",
+    "UID",
+
+    "NETWORK",
+    "DSCP",
+
+    "RULE-SET",
+    "AND",
+    "OR",
+    "NOT",
+    "SUB-RULE",
+
+    "MATCH",
 ]
 
 mosdns_whitelist_urls = [
