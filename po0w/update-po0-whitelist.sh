@@ -2,14 +2,16 @@
 
 # */5 * * * * /root/update-po0-whitelist.sh > /root/update-po0-whitelist.log 2>&1
 
-TOKEN=""
-SLOT="0"
+# One TOKEN/SLOT pair per line, in TOKEN@SLOT format.
+TOKEN_SLOT_PAIRS='
+token1@0
+token2@1
+'
 CACHE_DIFF="true"
 CACHE_MAX_AGE_HOURS=12
+CACHE_FILE_DIR="/tmp/po0w"
 
 API_HOST="https://124.221.69.228"
-API_URL="${API_HOST}/api/firewall/${TOKEN}/add?slot=${SLOT}"
-CACHE_FILE="/tmp/po0w-currentip-slot-${SLOT}"
 FORCE_UPDATE="false"
 
 usage() {
@@ -67,18 +69,6 @@ same_c_segment() {
     [ "$public_prefix" = "$network_prefix" ]
 }
 
-if [ -z "$TOKEN" ]; then
-    log "ERROR: TOKEN is empty"
-    exit 1
-fi
-
-case "$SLOT" in
-    ''|*[!0-9]*)
-        log "ERROR: SLOT must be a non-negative integer"
-        exit 1
-        ;;
-esac
-
 case "$(printf '%s' "$CACHE_DIFF" | tr 'A-Z' 'a-z')" in
     true) CACHE_DIFF="true" ;;
     false) CACHE_DIFF="false" ;;
@@ -96,12 +86,28 @@ case "$CACHE_MAX_AGE_HOURS" in
 esac
 CACHE_MAX_AGE=$((CACHE_MAX_AGE_HOURS * 3600))
 
+if [ -z "$CACHE_FILE_DIR" ]; then
+    log "ERROR: CACHE_FILE_DIR is empty"
+    exit 1
+fi
+
+umask 077
+if ! mkdir -p "$CACHE_FILE_DIR"; then
+    log "ERROR: failed to create cache directory: $CACHE_FILE_DIR"
+    exit 1
+fi
+
 if command -v curl >/dev/null 2>&1; then
     HTTP_CLIENT="curl"
 elif command -v wget >/dev/null 2>&1; then
     HTTP_CLIENT="wget"
 else
     log "ERROR: curl or wget not found"
+    exit 1
+fi
+
+if ! command -v sha256sum >/dev/null 2>&1; then
+    log "ERROR: sha256sum not found"
     exit 1
 fi
 
@@ -144,83 +150,155 @@ if ! is_ipv4 "$PUBLIC_IP"; then
     exit 1
 fi
 
-CACHED_IP=""
-CACHE_UPDATED_AT=""
-if [ -f "$CACHE_FILE" ]; then
-    CACHED_IP="$(sed -n '1p' "$CACHE_FILE")"
-    CACHE_UPDATED_AT="$(sed -n '2p' "$CACHE_FILE")"
-    if ! is_ipv4_cidr24 "$CACHED_IP"; then
-        CACHED_IP=""
+update_pair() {
+    TOKEN="$1"
+    SLOT="$2"
+
+    if [ -z "$TOKEN" ]; then
+        log "ERROR: TOKEN is empty"
+        return 1
     fi
-fi
 
-NOW="$(date '+%s')"
-CACHE_EXPIRED="true"
-CACHE_AGE=""
-case "$CACHE_UPDATED_AT" in
-    ''|*[!0-9]*)
-        CACHE_EXPIRED="true"
-        ;;
-    *)
-        CACHE_AGE=$((NOW - CACHE_UPDATED_AT))
-        if [ "$CACHE_AGE" -ge 0 ] && [ "$CACHE_AGE" -le "$CACHE_MAX_AGE" ]; then
-            CACHE_EXPIRED="false"
+    case "$SLOT" in
+        ''|*[!0-9]*)
+            log "ERROR: SLOT must be a non-negative integer"
+            return 1
+            ;;
+    esac
+
+    TOKEN_HASH="$(printf '%s\n' "$TOKEN" | sha256sum)"
+    TOKEN_HASH="${TOKEN_HASH%% *}"
+    if [ -z "$TOKEN_HASH" ]; then
+        log "ERROR: failed to hash TOKEN"
+        return 1
+    fi
+
+    TOKEN_ID="$(printf '%.12s' "$TOKEN_HASH")"
+    API_URL="${API_HOST}/api/firewall/${TOKEN}/add?slot=${SLOT}"
+    CACHE_FILE="${CACHE_FILE_DIR}/${TOKEN_HASH}"
+
+    CACHED_IP=""
+    CACHE_UPDATED_AT=""
+    if [ -f "$CACHE_FILE" ]; then
+        CACHED_IP="$(sed -n '1p' "$CACHE_FILE")"
+        CACHE_UPDATED_AT="$(sed -n '2p' "$CACHE_FILE")"
+        if ! is_ipv4_cidr24 "$CACHED_IP"; then
+            CACHED_IP=""
         fi
-        ;;
-esac
+    fi
 
-if [ "$FORCE_UPDATE" = "false" ] \
-    && [ "$CACHE_DIFF" = "true" ] \
-    && [ "$CACHE_EXPIRED" = "false" ] \
-    && same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
-    log "SKIP: public IP $PUBLIC_IP is already covered by $CACHED_IP"
-    exit 0
-fi
+    NOW="$(date '+%s')"
+    CACHE_EXPIRED="true"
+    CACHE_AGE=""
+    case "$CACHE_UPDATED_AT" in
+        ''|*[!0-9]*)
+            CACHE_EXPIRED="true"
+            ;;
+        *)
+            CACHE_AGE=$((NOW - CACHE_UPDATED_AT))
+            if [ "$CACHE_AGE" -ge 0 ] && [ "$CACHE_AGE" -le "$CACHE_MAX_AGE" ]; then
+                CACHE_EXPIRED="false"
+            fi
+            ;;
+    esac
 
-if [ "$FORCE_UPDATE" = "true" ]; then
-    log "INFO: forced update requested with -f; public IP: $PUBLIC_IP"
-elif [ "$CACHE_DIFF" = "false" ]; then
-    log "INFO: cache comparison disabled; public IP: $PUBLIC_IP"
-elif [ -z "$CACHED_IP" ]; then
-    log "INFO: no valid cache; public IP: $PUBLIC_IP"
-elif ! same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
-    log "INFO: public IP $PUBLIC_IP is outside cached network $CACHED_IP"
-elif [ -z "$CACHE_UPDATED_AT" ]; then
-    log "INFO: cache timestamp missing; forcing update"
-elif [ "$CACHE_EXPIRED" = "true" ]; then
-    log "INFO: cache expired after ${CACHE_AGE:-unknown} seconds; forcing update"
-else
-    log "INFO: forcing update"
-fi
+    if [ "$FORCE_UPDATE" = "false" ] \
+        && [ "$CACHE_DIFF" = "true" ] \
+        && [ "$CACHE_EXPIRED" = "false" ] \
+        && same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
+        log "SKIP: [slot=$SLOT token_id=$TOKEN_ID] public IP $PUBLIC_IP is already covered by $CACHED_IP"
+        return 0
+    fi
 
-if [ "$HTTP_CLIENT" = "curl" ]; then
-    RESPONSE="$(curl -k -sS --connect-timeout 10 --max-time 20 "$API_URL" 2>&1)"
-    STATUS=$?
-else
-    RESPONSE="$(wget --no-check-certificate -qO- -T 20 "$API_URL" 2>&1)"
-    STATUS=$?
-fi
+    if [ "$FORCE_UPDATE" = "true" ]; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] forced update requested with -f; public IP: $PUBLIC_IP"
+    elif [ "$CACHE_DIFF" = "false" ]; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] cache comparison disabled; public IP: $PUBLIC_IP"
+    elif [ -z "$CACHED_IP" ]; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] no valid cache; public IP: $PUBLIC_IP"
+    elif ! same_c_segment "$PUBLIC_IP" "$CACHED_IP"; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] public IP $PUBLIC_IP is outside cached network $CACHED_IP"
+    elif [ -z "$CACHE_UPDATED_AT" ]; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] cache timestamp missing; forcing update"
+    elif [ "$CACHE_EXPIRED" = "true" ]; then
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] cache expired after ${CACHE_AGE:-unknown} seconds; forcing update"
+    else
+        log "INFO: [slot=$SLOT token_id=$TOKEN_ID] forcing update"
+    fi
 
-if [ "$STATUS" -ne 0 ]; then
-    log "ERROR: $RESPONSE"
+    if [ "$HTTP_CLIENT" = "curl" ]; then
+        RESPONSE="$(curl -k -sS --connect-timeout 10 --max-time 20 "$API_URL" 2>&1)"
+        STATUS=$?
+    else
+        RESPONSE="$(wget --no-check-certificate -qO- -T 20 "$API_URL" 2>&1)"
+        STATUS=$?
+    fi
+
+    if [ "$STATUS" -ne 0 ]; then
+        log "ERROR: [slot=$SLOT token_id=$TOKEN_ID] $RESPONSE"
+        return 1
+    fi
+
+    API_CURRENT_IP="$(printf '%s' "$RESPONSE" | tr -d '\r\n' | sed -n 's/.*"currentIp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | tr -d '\\')"
+    if ! is_ipv4_cidr24 "$API_CURRENT_IP"; then
+        log "ERROR: [slot=$SLOT token_id=$TOKEN_ID] API response does not contain a valid currentIp: $RESPONSE"
+        return 1
+    fi
+
+    CACHE_TMP="${CACHE_FILE}.$"
+    CACHE_UPDATED_AT="$(date '+%s')"
+    if ! printf '%s\n%s\n' "$API_CURRENT_IP" "$CACHE_UPDATED_AT" > "$CACHE_TMP" \
+        || ! mv -f "$CACHE_TMP" "$CACHE_FILE"; then
+        rm -f "$CACHE_TMP"
+        log "ERROR: [slot=$SLOT token_id=$TOKEN_ID] failed to write cache file: $CACHE_FILE"
+        return 1
+    fi
+
+    log "OK: [slot=$SLOT token_id=$TOKEN_ID] public IP $PUBLIC_IP; cached currentIp $API_CURRENT_IP at $CACHE_UPDATED_AT; response: $RESPONSE"
+    return 0
+}
+
+PAIR_COUNT=0
+FAILED_COUNT=0
+while IFS= read -r TOKEN_SLOT_PAIR; do
+    if [ -z "$TOKEN_SLOT_PAIR" ]; then
+        continue
+    fi
+
+    PAIR_COUNT=$((PAIR_COUNT + 1))
+    case "$TOKEN_SLOT_PAIR" in
+        *[[:space:]]*|*@*@*|@*|*@)
+            log "ERROR: TOKEN_SLOT_PAIRS line $PAIR_COUNT must use TOKEN@SLOT format"
+            FAILED_COUNT=$((FAILED_COUNT + 1))
+            continue
+            ;;
+        *@*)
+            TOKEN="${TOKEN_SLOT_PAIR%@*}"
+            SLOT="${TOKEN_SLOT_PAIR#*@}"
+            ;;
+        *)
+            log "ERROR: TOKEN_SLOT_PAIRS line $PAIR_COUNT must use TOKEN@SLOT format"
+            FAILED_COUNT=$((FAILED_COUNT + 1))
+            continue
+            ;;
+    esac
+
+    if ! update_pair "$TOKEN" "$SLOT"; then
+        FAILED_COUNT=$((FAILED_COUNT + 1))
+    fi
+done <<EOF
+$TOKEN_SLOT_PAIRS
+EOF
+
+if [ "$PAIR_COUNT" -eq 0 ]; then
+    log "ERROR: TOKEN_SLOT_PAIRS is empty"
     exit 1
 fi
 
-API_CURRENT_IP="$(printf '%s' "$RESPONSE" | tr -d '\r\n' | sed -n 's/.*"currentIp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | tr -d '\\')"
-if ! is_ipv4_cidr24 "$API_CURRENT_IP"; then
-    log "ERROR: API response does not contain a valid currentIp: $RESPONSE"
+if [ "$FAILED_COUNT" -ne 0 ]; then
+    log "ERROR: $FAILED_COUNT of $PAIR_COUNT TOKEN/SLOT pairs failed"
     exit 1
 fi
 
-umask 077
-CACHE_TMP="${CACHE_FILE}.$$"
-CACHE_UPDATED_AT="$(date '+%s')"
-if ! printf '%s\n%s\n' "$API_CURRENT_IP" "$CACHE_UPDATED_AT" > "$CACHE_TMP" \
-    || ! mv -f "$CACHE_TMP" "$CACHE_FILE"; then
-    rm -f "$CACHE_TMP"
-    log "ERROR: failed to write cache file: $CACHE_FILE"
-    exit 1
-fi
-
-log "OK: public IP $PUBLIC_IP; cached currentIp $API_CURRENT_IP at $CACHE_UPDATED_AT; response: $RESPONSE"
+log "OK: processed $PAIR_COUNT TOKEN/SLOT pairs"
 exit 0
