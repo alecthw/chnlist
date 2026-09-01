@@ -1,0 +1,4 @@
+payload:
+  # Terminus
+  - DOMAIN-SUFFIX,emby.wtf
+  - DOMAIN-SUFFIX,term.wtf
