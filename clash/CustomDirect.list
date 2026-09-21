@@ -96,10 +96,10 @@ DOMAIN-SUFFIX,goproxy.io
 DOMAIN-SUFFIX,goproxy.cn
 
 # LLM Api
-DOMAIN-SUFFIX,cubence.com
-DOMAIN-SUFFIX,packyapi.com
-DOMAIN-SUFFIX,duckcoding.ai
-DOMAIN-SUFFIX,openclaudecode.cn
+# DOMAIN-SUFFIX,cubence.com
+# DOMAIN-SUFFIX,packyapi.com
+# DOMAIN-SUFFIX,duckcoding.ai
+# DOMAIN-SUFFIX,openclaudecode.cn
 
 # Custom
 DOMAIN-SUFFIX,ipip.net
