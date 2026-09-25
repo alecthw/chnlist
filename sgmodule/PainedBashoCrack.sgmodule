@@ -1,0 +1,10 @@
+#!name=涩蕉视频
+#!desc=涩蕉视频解锁会员
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js
+
+[Script]
+涩蕉视频-1 = type=http-request,pattern=^https?:\/\/sjapi\.juqianpu\.com\/api\/(video|app\/play_page),requires-body=1,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PainedBashoCrack.js
+
+[MITM]
+hostname = %APPEND% sjapi.juqianpu.com
