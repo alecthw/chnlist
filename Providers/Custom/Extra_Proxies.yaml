@@ -1,0 +1,15 @@
+payload:
+  # 主流Proxies代理列表之外的额外列表
+  # Jable
+  - DOMAIN-SUFFIX,jable.tv
+  - DOMAIN-SUFFIX,mushroomtrack.com
+  # Perplexity
+  - DOMAIN-SUFFIX,perplexity.ai
+  - DOMAIN-SUFFIX,perplexity.ai
+  - DOMAIN-SUFFIX,pplx.ai
+  # bamgrid
+  - DOMAIN-SUFFIX,edge.bamgrid.com
+  # Adobe 企业版sign
+  - DOMAIN-SUFFIX,eu1.adobesign.com
+  # RecognizeApp
+  - DOMAIN-SUFFIX,recognizeapp.com
