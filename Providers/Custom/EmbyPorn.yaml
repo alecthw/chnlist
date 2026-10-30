@@ -1,0 +1,10 @@
+payload:
+  # PornEmby
+  - DOMAIN-SUFFIX,once.im
+  - DOMAIN-SUFFIX,ii00.cc
+  - DOMAIN-SUFFIX,mefun.org
+  - DOMAIN-SUFFIX,mefun.vip
+  - DOMAIN-SUFFIX,42cdn.net
+  # UHDNow
+  - DOMAIN-SUFFIX,uhdnow.com
+  - DOMAIN-SUFFIX,uhdgo.com

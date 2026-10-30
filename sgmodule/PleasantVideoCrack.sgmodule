@@ -1,0 +1,10 @@
+#!name=悦色视频
+#!desc=悦色视频解锁会员
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js
+
+[Script]
+悦色视频-1 = type=http-request,pattern=^https?:\/\/ys\.huajibh\.com\/api\/video,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PleasantVideoCrack.js
+
+[MITM]
+hostname = %APPEND% ys.huajibh.com
