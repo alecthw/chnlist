@@ -1,0 +1,10 @@
+#!name=PornHubPremium
+#!desc=PornHub Unlock Premium
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js
+
+[Script]
+PornHubPremium-1 = type=http-request,pattern=^https?:\/\/cn\.pornhubpremium\.com\/,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/PornHubPremiumCrack.js
+
+[MITM]
+hostname = %APPEND% cn.pornhubpremium.com

@@ -1,0 +1,10 @@
+#!name=百度网盘
+#!desc=
+#!category=chnlist
+#!original=https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js
+
+[Script]
+百度网盘-1 = type=http-response,pattern=^https:\/\/pan\.baidu\.com\/rest\/\d\.\d\/membership\/user,requires-body=1,script-path=https://raw.githubusercontent.com/510004015/Quantumult_X/Remote/Premium/BaiduCloud.js
+
+[MITM]
+hostname = %APPEND% pan.baidu.com
