@@ -1,0 +1,10 @@
+payload:
+  - DOMAIN-SUFFIX,lastwar.com
+  - DOMAIN-SUFFIX,lastwarapp.com
+  - DOMAIN-SUFFIX,lastwargame.com
+  - DOMAIN-SUFFIX,lastwartutorial.com
+  - DOMAIN-SUFFIX,rivergame.net
+  - DOMAIN,lastwar-cdn.akamaized.net
+  - DOMAIN,www.lastwar.com.w.cdngslb.com
+  - DOMAIN-KEYWORD,lastwardev
+  - DOMAIN-KEYWORD,lastwar-
